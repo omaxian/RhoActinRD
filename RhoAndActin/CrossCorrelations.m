@@ -1,16 +1,25 @@
-function [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dy,dt,Adata,Bdata)
+function [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dy,dt,Adata,Bdata,padxy)
     Adata=Adata-mean(Adata(:));
     Bdata=Bdata-mean(Bdata(:));
     [Ny,Nx,Nt]=size(Adata);
-    % Pad in the z dimension
-    az = Adata;
-    az(:,:,end:end+Nt-1)=0;
-    bz = Bdata;
-    bz(:,:,end:end+Nt-1)=0;
-    c3=circshift(ifftn(fftn(bz).*conj(fftn(az))),[Ny/2 Nx/2 Nt-1]);
-    dtvals=[(-Nt+1:-1)*dt (0:Nt-1)*dt];
-    dxvals=(-Nx/2:Nx/2-1)*dx;
-    dyvals=(-Ny/2:Ny/2-1)*dy;
+    dtvals=(-Nt+1:Nt-1)*dt;
+    if (padxy)
+        az = zeros(2*Ny-1,2*Nx-1,2*Nt-1);
+        bz = zeros(2*Ny-1,2*Nx-1,2*Nt-1);
+        dxvals=(-Nx+1:Nx-1)*dx;
+        dyvals=(-Ny+1:Ny-1)*dy;
+        shft = [Ny-1 Nx-1 Nt-1];
+    else
+        az = zeros(Ny,Nx,2*Nt-1);
+        bz = zeros(Ny,Nx,2*Nt-1);
+        dxvals=(-Nx/2:Nx/2-1)*dx;
+        dyvals=(-Ny/2:Ny/2-1)*dy;
+        shft = [Ny/2 Nx/2 Nt-1];
+    end
+    az(1:Ny,1:Nx,1:Nt)=Adata;
+    bz(1:Ny,1:Nx,1:Nt)=Bdata;
+    c3=circshift(ifftn(fftn(bz).*conj(fftn(az))),shft);
+    
     [xg,yg]=meshgrid(dxvals,dyvals);
     rg=sqrt(xg(:,:,1).^2+yg(:,:,1).^2);
     [val,SortedInds]=sort(rg(:));
@@ -23,12 +32,7 @@ function [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dy,dt,Adata,Bdata)
         for iP=1:nu
             DistsByR(iT,iP)=mean(ThisImg(SortedInds(ic==iP)));
         end
-    end
-    figure
-    title('Cross correlation')
-    imagesc(Uvals,dtvals,DistsByR)
-    xlabel('$\Delta r$')
-    ylabel('$\Delta t$')
+    end   
 end
 
 

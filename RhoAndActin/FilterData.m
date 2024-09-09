@@ -1,8 +1,12 @@
-function FiltData = FilterData(Data,ksq,kFilt,Nx)  
+function FiltData = FilterData(Data,nModes)  
     [ny,nx,nFr]=size(Data);
-    FiltData=zeros(Nx,Nx,nFr);
+    Nx=2*nx-2;
+    FiltData=zeros(ny,nx,nFr);
     kvalsX = [0:nx-1 -nx+2:-1]*2*pi;
     kvalsY = [0:ny-1 -ny+2:-1]*2*pi;
+    kFilt = (nModes*2*pi)^2;
+    [kx,ky]=meshgrid(kvalsX,kvalsY);
+    ksq=kx.^2+ky.^2;
     for iT=1:nFr
         ThisFr = Data(:,:,iT);
         PerExtData = [ThisFr fliplr(ThisFr(:,2:end-1))];
@@ -26,6 +30,7 @@ function FiltData = FilterData(Data,ksq,kFilt,Nx)
             DataHat(Nx/2+1,:)=0;
         end
         DataHat(ksq>kFilt)=0;
-        FiltData(:,:,iT) = ifft2(DataHat);
+        PaddedRev = ifft2(DataHat);
+        FiltData(:,:,iT) = PaddedRev(1:ny,1:nx,:);
     end
 end
