@@ -25,3 +25,5 @@ plot(koffs(2:sw2),Branch1,'-k')
 hold on
 plot(koffs(sw1:sw2),Branch2,':k')
 plot(koffs(sw1:end),Branch3,'-k')
+ylim([0 3])
+%plot(koffs,Pts)

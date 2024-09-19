@@ -11,6 +11,8 @@ function AddedNucs=NucleateNewActin(NucRate,x,y)
     nTot = nDef+nAdd; % number of nucleates for each cell
     NewCells = find(nTot>0);
     AddedNucs=[];
+%     nMax=max(nTot(:));
+%     AddedNucs2=zeros(length(NewCells)*nMax,2)+nan;
     for iC=1:length(NewCells)
         yind=mod(NewCells(iC),Ny);
         if (yind==0)
@@ -24,5 +26,14 @@ function AddedNucs=NucleateNewActin(NucRate,x,y)
         % Nucleate in the box between x and x+dx
         NewPt = rand(1,2).*[dx dy]+[x(xind) y(yind)];
         AddedNucs=[AddedNucs;NewPt];
+%         AddedNucs2((iC-1)*nMax+1:(iC-1)*nMax+nTot(NewCells(iC)),:)=NewPt;
+%         try
+%         AddedNucs2=rmmissing(AddedNucs2);
+%         if(max(abs(AddedNucs2(:)-AddedNucs(:)))>0)
+%             keyboard
+%         end
+%         catch
+%             keyboard
+%         end
     end
 end

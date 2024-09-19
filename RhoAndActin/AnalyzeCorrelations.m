@@ -1,23 +1,33 @@
 % Cross correlation profiles in experimental data
-MovieNum=2;
+MovieNum=3;
 pxlSize = 0.1;
 FrTime = 0.3;
 Rho=double(load(strcat('NMYRho_',num2str(MovieNum),'.mat')).RhoData);
 Actin=double(load(strcat('NMYActin_',num2str(MovieNum),'.mat')).ActinData);
+% Bement data
+pxlSize = 120/212;
+FrTime = 330/72;
+Rho=tiffreadVolume("BementRho.tif");
+Actin=tiffreadVolume("BementRGA.tif");
+%Difference subtraction (removes static signal)
+Rho=Rho-Rho(:,:,end);
+Actin=Actin-Actin(:,:,end);
 % Filter data
-%nModes=10;
-%Rho = FilterData(Rho,nModes);
-%Actin = FilterData(Actin,nModes);
+nModes=inf;
+Rho = FilterData(Rho,nModes);
+Actin = FilterData(Actin,nModes);
 % Make a plot of the data
-tsPl=[10 20 30];
-FrPl=ceil(tsPl/FrTime);
-Nx=200;
+%tsPl=[0:4:20];
+tsPl=[0:100:300];
+FrPl=ceil(tsPl/FrTime)+1;
+%Nx=length(xc);
+Nx=154;
 x=(0:Nx-1)*pxlSize;
 y=(0:Nx-1)*pxlSize;
 tiledlayout(2,length(tsPl),'Padding', 'none', 'TileSpacing', 'compact');
 for iP=1:length(tsPl)
     nexttile
-    imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,Rho(:,:,FrPl(iP)));
+    imagesc(x,y,Rho(:,:,FrPl(iP)));
     title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
     if (iP==1)
         ylabel('Rho concentration')
@@ -25,7 +35,7 @@ for iP=1:length(tsPl)
 end
 for iP=1:length(tsPl)
     nexttile
-    imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,Actin(:,:,FrPl(iP)));
+    imagesc(x,y,Actin(:,:,FrPl(iP)));
     if (iP==1)
         ylabel('Actin concentration')
     end
