@@ -63,7 +63,9 @@ end
 % Do norm of the difference
 InterpolatedSim=InterpolatedSim/max(abs(InterpolatedSim(:)));
 DistsByR=DistsByR/max(abs(DistsByR(:)));
-Difference=InterpolatedSim-DistsByR;
+% Distance weighted norms
+DistsWts=exp(-Uvals'/2);
+Difference=DistsWts.*(InterpolatedSim-DistsByR).*(InterpolatedSim-DistsByR);
 tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
 nexttile
 imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
@@ -73,5 +75,5 @@ imagesc(Uvals,dtvals,DistsByR)
 clim([-1 1])
 colormap turbo
 pause(1)
-DiffNorm=sum(Difference(:).*Difference(:))
+DiffNorm=sum(Difference(:))
 

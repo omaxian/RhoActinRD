@@ -1,11 +1,10 @@
-% In 2D, we are stacking columns
 nSamp = 1000;
-k0s=0.51;
-rfs=0.52;
-FullLifetime=23.4;
-GrShrnk = 0.23; % rate in um/s
-MaxLength = 1.92; % in um
-N0PerMax = 0.25;
+k0s=0.9;
+rfs=0.4;
+FullLifetime=15;
+GrShrnk = 0.1; % rate in um/s
+MaxLength = 1; % in um
+N0PerMax = 0.2;
 Du = 1e-1;
 Params = [k0s;rfs;FullLifetime;GrShrnk;MaxLength;N0PerMax;Du];
 DifferencesModelExp=zeros(nSamp,1);
@@ -13,19 +12,23 @@ AllParameters=zeros(7,nSamp);
 StableSim = ones(nSamp,1);
 LastAccept=1;
 Accepted=zeros(nSamp,1);
+%inds=23;
 for iSamp=1:nSamp
+% Params=AllParameters(:,inds(iSamp));
+% DiffChk=DifferencesModelExp(inds(iSamp))
 OldParams=Params;
 if (iSamp>1)
     % Proposal
-    k0Step = 0.05*randn;
+    k0Step = min(1.25-OldParams(1),0.05*randn);
     rfStep = 0.05*randn;
     LifetimeStep =2*randn;
     GrShrnkStep = 0.05*randn;
     MaxLenStep = 0.2*randn;
     N0PerMaxStep=0.04*randn; % symmetric proposal
     DuStep = 0.01*randn;
-    Params = OldParams+[k0Step;rfStep;LifetimeStep;...
-        GrShrnkStep;MaxLenStep;N0PerMaxStep;DuStep];
+    DeltaParams=max([k0Step;rfStep;LifetimeStep;...
+        GrShrnkStep;MaxLenStep;N0PerMaxStep;DuStep],-Params);
+    Params = OldParams+DeltaParams;
 end
 close all;
 rng(2);
@@ -33,25 +36,30 @@ kbasal=0.05;
 kfb=1;
 KFB=0.1;
 kNoise=0;
-koff0=max(0,Params(1));
-rf = max(0,Params(2));
+koff0=Params(1);
+rf = Params(2);
 % Solve for the steady states in absence of actin
+try
 p=0:0.001:100;
 OnRate = (kbasal+kfb*p.^3./(KFB+p.^3));
 OffRate=(koff0*p);
 Net=OnRate-OffRate;
 SgnChg=find((Net(1:end-1).*Net(2:end))<0);
 StSt=p(SgnChg);
-Nuc0=max(0,Params(6))/max(StSt);
+Nuc0=Params(6)/max(StSt);
+catch
+StSt=100;
+Nuc0=Params(6)/max(StSt);
+end
 dt=0.1; % Stability limit is 0.4
 tf = 240;
-Du=max(0,Params(7)); % The size of the waves depends on Du
-tsaves = [15 30 50 100 200];
+Du=Params(7); % The size of the waves depends on Du
+tsaves = [100 200];
 % Parameters for the actin
 PoreSize=[];
 ds=0.1;
-FullLifetime = max(0,Params(3)); % the average lifetime of a filament (s)
-GrShrnk=max(0.02,Params(4));
+FullLifetime = Params(3); % the average lifetime of a filament (s)
+GrShrnk=Params(4);
 GrowAmt = (GrShrnk/ds*dt);% (#mon per time step - first number is um/s)
 ShrinkAmt = (GrShrnk/ds*dt); % (#mon per time step - first number is um/s)
 MaxLength = max(ds,floor(Params(5)/ds)*ds);
@@ -132,13 +140,13 @@ for iT=1:nSt
         StableSim(iSamp)=0;
         break
     end
-%     if (sum(abs(iT*dt-tsaves)<1e-10)>0)
-%         index = find(abs(iT*dt-tsaves)<1e-10);
-%         PlotUs(:,index)=reshape(u,[],1);
-%         PlotXfs{index}=Xf-floor(Xf/L)*L;
-%         PlotTs(index)=iT*dt;
-%     end
-    if (mod(iT-1,50)==0)
+    if (sum(abs(iT*dt-tsaves)<1e-10)>0)
+        index = find(abs(iT*dt-tsaves)<1e-10);
+        PlotUs(:,index)=reshape(u,[],1);
+        PlotXfs{index}=Xf-floor(Xf/L)*L;
+        PlotTs(index)=iT*dt;
+    end
+    if (mod(iT-1,5)==0)
         imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
         set(gca,'YDir','Normal')
         hold on
@@ -170,7 +178,7 @@ AllParameters(:,iSamp)=Params;
 AllXCors{iSamp}=InterpolatedSim;
 % Accept or reject
 if (iSamp > 1)
-    kT=20;
+    kT=3.7;
     r1=exp(-DifferencesModelExp(iSamp)/kT);
     rLast=exp(-DifferencesModelExp(LastAccept)/kT);
     pAcc=r1/rLast;
@@ -184,7 +192,7 @@ end
 end
 % figure;
 % [~,nPlot]=size(PlotUs);
-% tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+% tiledlayout(1,nPlot+1,'Padding', 'none', 'TileSpacing', 'compact');
 % for iT=1:nPlot
 %     nexttile
 %     imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
@@ -204,7 +212,11 @@ end
 %         ylabel('$y$')
 %     end
 % end
-% 
+% nexttile
+% imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
+% clim([-1 1])
+% colorbar
+% % 
 % figure;
 % padxy=0;
 % tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
