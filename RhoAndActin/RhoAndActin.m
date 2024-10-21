@@ -1,10 +1,9 @@
-function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
+function Statistics = RhoAndActin(Params,seed,ZeroEr)
     % Parameters:
     % koff0, rf, FullLifetime, GrShrnk, MaxLength, Nuc0, DRho 
     % in that order
     % Output is the difference in the cross correlations compared to
     % experimental data
-    MeanActin=inf;
     rng(seed);
     MakeMovie=0;
     kbasal=0.05;
@@ -20,18 +19,18 @@ function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
     Net=OnRate-OffRate;
     SgnChg=find((Net(1:end-1).*Net(2:end))<0);
     StSt=p(SgnChg);
-    Nuc0=Params(6)/max(StSt);
+    Nuc0=Params(6)/max(StSt)^2;
     catch
     warning('Automatic rejection cannot find Rho steady state(s)')
-    DiffNorm=inf;
-    InterpolatedSim=[];
-    MeanActin=0;
+    Statistics.DiffNorm=inf;
+    Statistics.InterpolatedSim=[];
+    Statistics.MeanActin=0;
     return;
     end
     dt=0.1; % Stability limit is 0.4
     tf = 240;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [100 200];
+    tsaves = 40:40:200;
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -52,14 +51,19 @@ function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
     dx=L/Nx;
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
-    [xg,yg]=meshgrid(x,y);
-    u = rand(Nx,Nx)*ICScale;
+    %[xg,yg]=meshgrid(x,y);
+    u = ones(Nx,Nx)*ICScale;
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
     ksq=kx.^2+ky.^2;
     DivFacFourier = (1/dt+Du*ksq);
     nSt = floor(tf/dt+1e-10);
+    nSave = floor(tf/(saveEvery*dt)+1e-10);
+    AllRho=zeros(Nx,Nx,nSave)+min(StSt);
+    AllActin=zeros(Nx,Nx,nSave);
+
     if (MakeMovie)
+        close all;
         f=figure;
     end
     % Set up an initial actin grid
@@ -98,6 +102,15 @@ function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
                 fg=fg+fgDiff;
             end
         end
+        % Break out of simulations that aren't doing anything
+        if (max(u(:)) < 1.05*min(StSt) && min(StSt) < 0.5)
+            Statistics.DiffNorm=ZeroEr;
+            Statistics.MeanActin=0;
+            Statistics.InterpolatedSim=[];
+            Statistics.AvgExcitation=0;
+            Statistics.NumExcitations=0;
+            return;
+        end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*fg).*u;
         RHSHat = fft2(u/dt+RHS);
         uHatNew = RHSHat./(DivFacFourier);
@@ -105,9 +118,7 @@ function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
         u = uNew;
         if (max(abs(u(:)) > 1e5))
             warning('Rejecting because of unstable simulation')
-            DiffNorm=inf;
-            InterpolatedSim=[];
-            MeanActin=0;
+            Statistics.MeanActin=0;
             return;
         end
         if (sum(abs(iT*dt-tsaves)<1e-10)>0)
@@ -122,11 +133,11 @@ function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
             hold on
             if (~isempty(Xf))
                 Xfpl=Xf-floor(Xf/L)*L;
-                plot(Xfpl(:,1),Xfpl(:,2),'ko','MarkerSize',0.25)
+                plot(Xfpl(:,1),Xfpl(:,2),'ko','MarkerSize',0.125)
             end
             colorbar
-            clim([0 StSt(end)])
-            colormap("turbo")
+            %clim([0 StSt(end)])
+            %colormap("turbo")
             title(sprintf('$t= %1.1f$',t))
             drawnow
             hold off
@@ -140,77 +151,79 @@ function [DiffNorm,InterpolatedSim,MeanActin] = RhoAndActin(Params,seed)
     % Compute cross correlation function
     try
     CompareXCors;
+    Statistics.DiffNorm=DiffNorm;
+    Statistics.InterpolatedSim=InterpolatedSim;
+    Statistics.AvgExcitation=AvgExcitationSize;
+    Statistics.NumExcitations=NumExcitations;
     catch
-    DiffNorm=inf;
-    InterpolatedSim=[];
     end
-    MeanActin=mean(AllActin(:));
-    % figure;
-    % [~,nPlot]=size(PlotUs);
-    % tiledlayout(1,nPlot+1,'Padding', 'none', 'TileSpacing', 'compact');
-    % for iT=1:nPlot
-    %     nexttile
-    %     imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
-    %     title(strcat('$t=$',num2str(PlotTs(iT))))
-    %     clim([min(PlotUs(:)) max(PlotUs(:))])
-    %     %clim([0 3])
-    %     set(gca,'YDir','Normal')
-    %     colormap(turbo)
-    %     hold on
-    %     if (~isempty(Xf))
-    %         plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
-    %     end
-    %     if (iT==nPlot)
-    %         colorbar
-    %     end
-    %     if (iT==1)
-    %         ylabel('$y$')
-    %     end
-    % end
-    % nexttile
-    % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
-    % clim([-1 1])
-    % colorbar
-    % % 
-    % figure;
-    % padxy=0;
-    % tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-    % % nexttile
-    % % plot((dt:dt:tf),TotActin)
-    % % xlabel('$t$ (s)')
-    % % ylabel('Polymerized actin ($\mu$m)')
-    % % title('Total actin')
-    % nexttile
-    % [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-    %     AllRho,AllRho,padxy);
-    % imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
-    % title('Rho')
-    % ylim([-60 60])
-    % xlim([0 10])
-    % a=clim;
-    % clim([-max(abs(a)) max(abs(a))]);
-    % xlabel('$\Delta r$')
-    % ylabel('$\Delta t$')
-    % nexttile
-    % [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-    %     AllRho,AllActin,padxy);
-    % imagesc(Uvals,dtvals,DistsByR/max(abs(DistsByR(:))))
-    % xlabel('$\Delta r$')
-    % ylim([-60 60])
-    % xlim([0 10])
-    % title('Rho-Actin')
-    % a=clim;
-    % clim([-max(abs(a)) max(abs(a))]);
-    % nexttile
-    % [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-    %     AllActin,AllActin,padxy);
-    % imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
-    % xlabel('$\Delta r$')
-    % title('Actin')
-    % ylim([-60 60])
-    % xlim([0 10])
-    % a=clim;
-    % clim([-max(abs(a)) max(abs(a))]);
-    % colormap turbo
-    close all;
+    Statistics.MeanActin=mean(AllActin(:));
+%     figure;
+%     [~,nPlot]=size(PlotUs);
+%     tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+%     for iT=1:nPlot
+%         nexttile
+%         imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
+%         title(strcat('$t=$',num2str(PlotTs(iT))))
+%         clim([min(PlotUs(:)) max(PlotUs(:))])
+%         %clim([0 3])
+%         set(gca,'YDir','Normal')
+%         colormap(turbo)
+%         hold on
+%         if (~isempty(Xf))
+%             plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
+%         end
+%         if (iT==nPlot)
+%             colorbar
+%         end
+%         if (iT==1)
+%             ylabel('$y$')
+%         end
+%     end
+%     % nexttile
+%     % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
+%     % clim([-1 1])
+%     % colorbar
+%     % % 
+%     figure;
+%     padxy=0;
+%     tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+%     % nexttile
+%     % plot((dt:dt:tf),TotActin)
+%     % xlabel('$t$ (s)')
+%     % ylabel('Polymerized actin ($\mu$m)')
+%     % title('Total actin')
+%     nexttile
+%     [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
+%         AllRho,AllRho,padxy);
+%     imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
+%     title('Rho')
+%     ylim([-60 60])
+%     xlim([0 10])
+%     a=clim;
+%     clim([-max(abs(a)) max(abs(a))]);
+%     xlabel('$\Delta r$')
+%     ylabel('$\Delta t$')
+%     nexttile
+%     [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
+%         AllRho,AllActin,padxy);
+%     imagesc(Uvals,dtvals,DistsByR/max(abs(DistsByR(:))))
+%     xlabel('$\Delta r$')
+%     ylim([-60 60])
+%     xlim([0 10])
+%     title('Rho-Actin')
+%     a=clim;
+%     clim([-max(abs(a)) max(abs(a))]);
+%     nexttile
+%     [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
+%         AllActin,AllActin,padxy);
+%     imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
+%     xlabel('$\Delta r$')
+%     title('Actin')
+%     ylim([-60 60])
+%     xlim([0 10])
+%     a=clim;
+%     clim([-max(abs(a)) max(abs(a))]);
+%     colormap turbo
+%     close all;
 end

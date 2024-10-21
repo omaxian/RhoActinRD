@@ -1,7 +1,6 @@
-nEnsemble = 8;
-nSamp = 250; % samples per ensemble
+nWalker = 50;
+nSamp = 500; % samples per ensemble
 nParams = 6;
-load('SeedParamsNoDiff.mat')
 % k0s=0.9;
 % rfs=0.4;
 % FullLifetime=15;
@@ -9,20 +8,21 @@ load('SeedParamsNoDiff.mat')
 % MaxLength = 1; % in um
 % N0PerMax = 0.2;
 % Params = [k0s;rfs;FullLifetime;GrShrnk;MaxLength;N0PerMax];
-AllDifferencesModelExp=zeros(nSamp,nEnsemble);
-AllParameters=zeros(nParams*nEnsemble,nSamp);
-CurrentParams=SeedParams(:,1:nEnsemble);
-CurrentParams=CurrentParams(:);
-AllMeanActins=zeros(nSamp,nEnsemble);
-Accepted=zeros(nSamp,nEnsemble);
-LastAccept=ones(nEnsemble,1);
+PStart=[0.5;0.5;15;1.5;5;0.2];
+AllDifferencesModelExp=zeros(nSamp,nWalker);
+AllParameters=zeros(nParams*nWalker,nSamp);
+CurrentParams=repmat(PStart,nWalker,1)+randn(nParams*nWalker,1)*0.05;
+AllMeanActins=zeros(nSamp,nWalker);
+Accepted=zeros(nSamp,nWalker);
+LastAccept=ones(nWalker,1);
 for iSamp=1:nSamp
-    for k=1:nEnsemble
+    iSamp
+    for k=1:nWalker
         if (iSamp>1)
             % Proposal
             j=k;
             while (j==k)
-                j = ceil(rand*nEnsemble);
+                j = ceil(rand*nWalker);
             end
             % Sample from g
             a=1.2;
@@ -57,9 +57,10 @@ for iSamp=1:nSamp
             kT=3;
             Likelihood=exp(-AllDifferencesModelExp(iSamp,k)/kT);
             OldLikelihood=exp(-AllDifferencesModelExp(LastAccept(k),k)/kT);
-            vPrior = Prior(MeanActin,Params(1));
+            vPrior = Prior(MeanActin,Params(1),Params(2));
             OldvPrior = Prior(AllMeanActins(LastAccept(k),k),...
-                AllParameters(nParams*(k-1)+1,LastAccept(k)));
+                AllParameters(nParams*(k-1)+1,LastAccept(k)),...
+                AllParameters(nParams*(k-1)+2,LastAccept(k)));
             pAcc=z^(nParams-1)*(Likelihood*vPrior)/(OldLikelihood*OldvPrior);
             if (rand < pAcc) % accept
                 LastAccept(k)=iSamp;
@@ -70,7 +71,7 @@ for iSamp=1:nSamp
     end
 end
 
-function p = Prior(MeanActin,koff)
+function p = Prior(MeanActin,koff,rf)
     p = exp(-2*(MeanActin-1)^2.*(MeanActin>1)).*...
-        exp(-500*(MeanActin-0.2)^2.*(MeanActin<0.2)).*(koff<1.25);
+        exp(-500*(MeanActin-0.2)^2.*(MeanActin<0.2)).*(koff<1.25).*(koff>0.4).*(rf>0.2);
 end

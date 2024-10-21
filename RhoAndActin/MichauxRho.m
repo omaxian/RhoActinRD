@@ -1,4 +1,4 @@
-koffs=0:0.01:2;
+koffs=0:0.001:2;
 Pts=zeros(3,length(koffs));
 for iK=1:length(koffs)
     kp0=0.05;

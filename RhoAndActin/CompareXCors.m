@@ -5,6 +5,26 @@ padxy=0;
 % Cut out first 40 s
 AllActin=AllActin(:,:,41:end);
 AllRho=AllRho(:,:,41:end);
+% Compute average size of Rho excitations
+try
+Thres=StSt(2);
+catch
+Thres=0.5;
+end
+RhoThres=AllRho>Thres;
+[~,~,nFr]=size(RhoThres);
+NumExcitations=zeros(nFr,1);
+AvgExcitationSize=zeros(nFr,1);
+for iT=1:nFr
+    CC = bwconncomp(RhoThres(:,:,iT));
+    L2=CC2periodic(CC,[1 1],'L');
+    NumExcitations(iT)=max(L2(:));
+    ThisExSize = zeros(NumExcitations(iT),1);
+    for iJ=1:max(L2(:))
+        ThisExSize(iJ)=sum(L2(:)==iJ)/(Nx^2)*L^2;
+    end
+    AvgExcitationSize(iT)=mean(ThisExSize);
+end
 [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
     AllRho,AllActin,padxy);
 % Load the experimental
@@ -61,7 +81,9 @@ for iT=1:length(dtvals)
     end
 end
 % Do norm of the difference
-InterpolatedSim=InterpolatedSim/max(abs(InterpolatedSim(:)));
+if (max(abs(InterpolatedSim(:)>0)))
+    InterpolatedSim=InterpolatedSim/max(abs(InterpolatedSim(:)));
+end
 DistsByR=DistsByR/max(abs(DistsByR(:)));
 % Distance weighted norms
 DistsWts=exp(-Uvals'/2);
