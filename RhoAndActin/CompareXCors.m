@@ -1,5 +1,6 @@
 % Compare the cross correlation generated from simulation to that from
-% Bement
+% experiments
+Bement=0; % set to 1 for frog and starfish, 0 for C elegans
 % Evaluate the cross correlation function
 padxy=0;
 % Cut out first 40 s
@@ -28,10 +29,18 @@ end
 [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
     AllRho,AllActin,padxy);
 % Load the experimental
-load('BementXCorsDS.mat')
-% Limit experimental to reasonable range
-tmax=120;
-rmax=10;
+if (Bement)
+    load('BementXCorsDS.mat')
+    % Limit experimental to reasonable range
+    tmax=120;
+    rmax=10;
+    
+else
+    load('BaixueXCorsDS.mat')
+    % Shorter-ranged in C elegans
+    tmax=60;
+    rmax=5;
+end
 DistsByR=DistsByR(abs(dtvals)<=tmax, Uvals<=rmax);
 Uvals=Uvals(Uvals<=rmax);
 dtvals=dtvals(abs(dtvals)<tmax);

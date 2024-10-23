@@ -1,6 +1,6 @@
 function Statistics = RhoAndActin(Params,seed,ZeroEr)
     % Parameters:
-    % koff0, rf, FullLifetime, GrShrnk, MaxLength, Nuc0, DRho 
+    % koff0, rf, FullLifetime, GrShrnk, MaxLength, Nuc0 
     % in that order
     % Output is the difference in the cross correlations compared to
     % experimental data
@@ -30,7 +30,7 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
     dt=0.1; % Stability limit is 0.4
     tf = 240;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = 40:40:200;
+    tsaves = 50:50:200;
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -158,72 +158,74 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
     catch
     end
     Statistics.MeanActin=mean(AllActin(:));
-%     figure;
-%     [~,nPlot]=size(PlotUs);
-%     tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
-%     for iT=1:nPlot
-%         nexttile
-%         imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
-%         title(strcat('$t=$',num2str(PlotTs(iT))))
-%         clim([min(PlotUs(:)) max(PlotUs(:))])
-%         %clim([0 3])
-%         set(gca,'YDir','Normal')
-%         colormap(turbo)
-%         hold on
-%         if (~isempty(Xf))
-%             plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
-%         end
-%         if (iT==nPlot)
-%             colorbar
-%         end
-%         if (iT==1)
-%             ylabel('$y$')
-%         end
-%     end
-%     % nexttile
-%     % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
-%     % clim([-1 1])
-%     % colorbar
-%     % % 
-%     figure;
-%     padxy=0;
-%     tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-%     % nexttile
-%     % plot((dt:dt:tf),TotActin)
-%     % xlabel('$t$ (s)')
-%     % ylabel('Polymerized actin ($\mu$m)')
-%     % title('Total actin')
-%     nexttile
-%     [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-%         AllRho,AllRho,padxy);
-%     imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
-%     title('Rho')
-%     ylim([-60 60])
-%     xlim([0 10])
-%     a=clim;
-%     clim([-max(abs(a)) max(abs(a))]);
-%     xlabel('$\Delta r$')
-%     ylabel('$\Delta t$')
-%     nexttile
-%     [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-%         AllRho,AllActin,padxy);
-%     imagesc(Uvals,dtvals,DistsByR/max(abs(DistsByR(:))))
-%     xlabel('$\Delta r$')
-%     ylim([-60 60])
-%     xlim([0 10])
-%     title('Rho-Actin')
-%     a=clim;
-%     clim([-max(abs(a)) max(abs(a))]);
-%     nexttile
-%     [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-%         AllActin,AllActin,padxy);
-%     imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
-%     xlabel('$\Delta r$')
-%     title('Actin')
-%     ylim([-60 60])
-%     xlim([0 10])
-%     a=clim;
-%     clim([-max(abs(a)) max(abs(a))]);
-%     colormap turbo
-%     close all;
+    if (0)
+        figure;
+        [~,nPlot]=size(PlotUs);
+        tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+        for iT=1:nPlot
+            nexttile
+            imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
+            title(strcat('$t=$',num2str(PlotTs(iT))))
+            clim([min(PlotUs(:)) max(PlotUs(:))])
+            %clim([0 3])
+            set(gca,'YDir','Normal')
+            colormap(turbo)
+            hold on
+            if (~isempty(Xf))
+                plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
+            end
+            if (iT==nPlot)
+                colorbar
+            end
+            if (iT==1)
+                ylabel('$y$')
+            end
+        end
+        % nexttile
+        % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
+        % clim([-1 1])
+        % colorbar
+        % % 
+        figure;
+        padxy=0;
+        tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+        % nexttile
+        % plot((dt:dt:tf),TotActin)
+        % xlabel('$t$ (s)')
+        % ylabel('Polymerized actin ($\mu$m)')
+        % title('Total actin')
+        nexttile
+        [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
+            AllRho,AllRho,padxy);
+        imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
+        title('Rho')
+        ylim([-60 60])
+        xlim([0 10])
+        a=clim;
+        clim([-max(abs(a)) max(abs(a))]);
+        xlabel('$\Delta r$')
+        ylabel('$\Delta t$')
+        nexttile
+        [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
+            AllRho,AllActin,padxy);
+        imagesc(Uvals,dtvals,DistsByR/max(abs(DistsByR(:))))
+        xlabel('$\Delta r$')
+        ylim([-60 60])
+        xlim([0 10])
+        title('Rho-Actin')
+        a=clim;
+        clim([-max(abs(a)) max(abs(a))]);
+        nexttile
+        [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
+            AllActin,AllActin,padxy);
+        imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
+        xlabel('$\Delta r$')
+        title('Actin')
+        ylim([-60 60])
+        xlim([0 10])
+        a=clim;
+        clim([-max(abs(a)) max(abs(a))]);
+        colormap turbo
+        close all;
+    end
 end

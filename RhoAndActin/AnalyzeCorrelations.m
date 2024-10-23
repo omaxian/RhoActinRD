@@ -5,23 +5,23 @@ FrTime = 0.3;
 Rho=double(load(strcat('NMYRho_',num2str(MovieNum),'.mat')).RhoData);
 Actin=double(load(strcat('NMYActin_',num2str(MovieNum),'.mat')).ActinData);
 % Bement data
-pxlSize = 120/212;
-FrTime = 330/72;
-Rho=tiffreadVolume("BementRho.tif");
-Actin=tiffreadVolume("BementRGA.tif");
-%Difference subtraction (removes static signal)
-Rho=Rho-Rho(:,:,end);
-Actin=Actin-Actin(:,:,end);
+% pxlSize = 120/212;
+% FrTime = 330/72;
+% Rho=tiffreadVolume("BementRho.tif");
+% Actin=tiffreadVolume("BementRGA.tif");
+% %Difference subtraction (removes static signal)
+% Rho=Rho-Rho(:,:,end);
+% Actin=Actin-Actin(:,:,end);
 % Filter data
 nModes=inf;
 Rho = FilterData(Rho,nModes);
 Actin = FilterData(Actin,nModes);
 % Make a plot of the data
 %tsPl=[0:4:20];
-tsPl=[0:100:300];
+tsPl=[10 20 30];
 FrPl=ceil(tsPl/FrTime)+1;
 %Nx=length(xc);
-Nx=154;
+Nx=200;
 x=(0:Nx-1)*pxlSize;
 y=(0:Nx-1)*pxlSize;
 tiledlayout(2,length(tsPl),'Padding', 'none', 'TileSpacing', 'compact');
