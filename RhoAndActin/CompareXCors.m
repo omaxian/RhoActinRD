@@ -1,6 +1,6 @@
 % Compare the cross correlation generated from simulation to that from
 % experiments
-Bement=0; % set to 1 for frog and starfish, 0 for C elegans
+Bement=ZeroEr<20; % set to 1 for frog and starfish, 0 for C elegans
 % Evaluate the cross correlation function
 padxy=0;
 % Cut out first 40 s
@@ -34,7 +34,6 @@ if (Bement)
     % Limit experimental to reasonable range
     tmax=120;
     rmax=10;
-    
 else
     load('BaixueXCorsDS.mat')
     % Shorter-ranged in C elegans

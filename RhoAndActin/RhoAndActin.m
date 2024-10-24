@@ -226,6 +226,6 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
         a=clim;
         clim([-max(abs(a)) max(abs(a))]);
         colormap turbo
-        close all;
+        %close all;
     end
 end

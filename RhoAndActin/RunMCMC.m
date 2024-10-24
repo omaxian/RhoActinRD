@@ -1,24 +1,30 @@
+Bement=1;
 nWalker = 50;
 nSamp = 500; % samples per ensemble
+nSeed = 10; % averages per parameter set
 nParams = 6;
-% k0s=0.9;
-% rfs=0.4;
-% FullLifetime=15;
-% GrShrnk = 0.1; % rate in um/s
-% MaxLength = 1; % in um
-% N0PerMax = 0.2;
-% Params = [k0s;rfs;FullLifetime;GrShrnk;MaxLength;N0PerMax];
-PStart=[0.5;0.5;15;1.5;5;0.2];
-AllDifferencesModelExp=zeros(nSamp,nWalker);
+PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
+if (Bement)
+    ZeroEr=14.4;
+    PStart=[0.8;0.4;12.7;0.5;4.3;0.16];
+else
+    ZeroEr=261.6;
+    PStart=[0.84;0.42;9.9;4.7;3.0;0.44];
+end
+AllDiffNorms=zeros(nSeed,nSamp,nWalker);
 AllParameters=zeros(nParams*nWalker,nSamp);
-CurrentParams=repmat(PStart,nWalker,1)+randn(nParams*nWalker,1)*0.05;
-AllMeanActins=zeros(nSamp,nWalker);
+CurrentParams=repmat(PStart,nWalker,1)+randn(nParams*nWalker,1)*0.02;
+AllMeanActins=zeros(nSeed,nSamp,nWalker);
+AllAverageExSize = zeros(nSeed,nSamp,nWalker);
+AllNumEx = zeros(nSeed,nSamp,nWalker);
 Accepted=zeros(nSamp,nWalker);
 LastAccept=ones(nWalker,1);
 for iSamp=1:nSamp
     iSamp
     for k=1:nWalker
         if (iSamp>1)
+        Params = inf*ones(nParams,1);
+        while (~inRange(Params,PBounds))
             % Proposal
             j=k;
             while (j==k)
@@ -35,33 +41,46 @@ for iSamp=1:nSamp
             Xk = CurrentParams((k-1)*nParams+1:k*nParams);
             Params = Xj + z*(Xk-Xj);
             Params = max(Params,0);
-%             k0Step = 0.05*randn;
-%             rfStep = 0.05*randn;
-%             LifetimeStep =2*randn;
-%             GrShrnkStep = 0.05*randn;
-%             MaxLenStep = 0.2*randn;
-%             N0PerMaxStep=0.04*randn; % symmetric proposal
-%             DeltaParams=max([k0Step;rfStep;LifetimeStep;...
-%                 GrShrnkStep;MaxLenStep;N0PerMaxStep],-Params);
-%             Params = OldParams+DeltaParams;
+        end
         else
             Params = CurrentParams((k-1)*nParams+1:k*nParams);
         end
-        [DiffNorm,InterpolatedSim,MeanActin]=RhoAndActin(Params,iSamp);
-        AllDifferencesModelExp(iSamp,k)=DiffNorm;
+        for seed=1:nSeed
+            Stats=RhoAndActin(Params,seed,ZeroEr);
+            % The criterion for moving on is a larger norm than zero PLUS a
+            % local max (-1) in the cross correlation at (0,0)
+            if (abs(Stats.DiffNorm-ZeroEr) < 1e-5)
+                ForgetIt=0; % It's zero
+            else
+                ForgetIt = Stats.DiffNorm > ZeroEr;
+            end
+            AllDiffNorms(seed,iSamp,k)=Stats.DiffNorm;
+            AllMeanActins(seed,iSamp,k)=Stats.MeanActin;
+            AllAverageExSize(seed,iSamp,k)=mean(Stats.AvgExcitation);
+            AllNumEx(seed,iSamp,k)=mean(Stats.NumExcitations);
+            if (ForgetIt) % Throw out really bad parameter sets
+                AllDiffNorms(seed+1:end,iSamp,k)=AllDiffNorms(seed,iSamp);
+                AllMeanActins(seed+1:end,iSamp,k)=AllMeanActins(seed,iSamp);
+                AllAverageExSize(seed+1:end,iSamp,k)=AllAverageExSize(seed,iSamp);
+                AllNumEx(seed+1:end,iSamp,k)=AllNumEx(seed,iSamp);
+                break;
+            end
+        end
         AllParameters((k-1)*nParams+1:k*nParams,iSamp)=Params;
-        AllXCors{iSamp,k}=InterpolatedSim;
-        AllMeanActins(iSamp,k)=MeanActin;
-        % Calculate probability and accept/reject
+        % Calculate relevant statistics
+        MeanEr = mean(AllDiffNorms(:,iSamp,k));
+        MeanActin = mean(AllMeanActins(:,iSamp,k));
+        MeanExSize = mean(AllAverageExSize(:,iSamp,k));
         if (iSamp > 1)
-            kT=3;
-            Likelihood=exp(-AllDifferencesModelExp(iSamp,k)/kT);
-            OldLikelihood=exp(-AllDifferencesModelExp(LastAccept(k),k)/kT);
-            vPrior = Prior(MeanActin,Params(1),Params(2));
-            OldvPrior = Prior(AllMeanActins(LastAccept(k),k),...
-                AllParameters(nParams*(k-1)+1,LastAccept(k)),...
-                AllParameters(nParams*(k-1)+2,LastAccept(k)));
-            pAcc=z^(nParams-1)*(Likelihood*vPrior)/(OldLikelihood*OldvPrior);
+            MeanErPrev = mean(AllDiffNorms(:,LastAccept(k),k));
+            MeanActinPrev = mean(AllMeanActins(:,LastAccept(k),k));
+            MeanExSizePrev = mean(AllAverageExSize(:,LastAccept(k),k));
+            Ell = Likelihood(MeanEr,ZeroEr);
+            PrevEll = Likelihood(MeanErPrev,ZeroEr);
+            Pr = Prior(MeanEr,MeanActin,MeanExSize,ZeroEr);
+            PrevPr = Prior(MeanErPrev,MeanActinPrev,...
+                MeanExSizePrev,ZeroEr);
+            pAcc=z^(nParams-1)*(Ell*Pr)/(PrevEll*PrevPr);
             if (rand < pAcc) % accept
                 LastAccept(k)=iSamp;
                 Accepted(iSamp,k)=1;
@@ -69,9 +88,40 @@ for iSamp=1:nSamp
             end
         end
     end
+    if (mod(iSamp,50)==0)
+        if (Bement)
+            save('MCMCBementRun.mat')
+        else
+            save('MCMCCERun.mat')
+        end
+    end
+end
+exit;
+
+function a = inRange(Params,Range)
+    % Check first one and then modify second
+    x1 = Params(1) > Range(1,1) && Params(1) < Range(1,2);
+    if (~x1)
+        a=0;
+        return;
+    end
+    Range(2,:)=Range(2,:)-Params(1);
+    Range(2,1)=max(Range(2,1),0.2);
+    x1 = Params > Range(:,1) & Params < Range(:,2);
+    a = sum(x1)==length(Params);
 end
 
-function p = Prior(MeanActin,koff,rf)
-    p = exp(-2*(MeanActin-1)^2.*(MeanActin>1)).*...
-        exp(-500*(MeanActin-0.2)^2.*(MeanActin<0.2)).*(koff<1.25).*(koff>0.4).*(rf>0.2);
+function ell = Likelihood(Ebar,E0)
+    kT=E0/7;
+    ell=exp(-Ebar/kT);
+end
+
+function p = Prior(MeanEr,MeanActin,MeanExSize,ZeroEr)
+    % Penalize mean actin < 0.2 and high errors
+    p = exp(-200*(MeanActin-0.2)^2*(MeanActin<0.2))...
+       *exp(-50*(MeanEr/ZeroEr-1)*(MeanEr>ZeroEr));
+    if (ZeroEr > 20) % hack for Baixue
+        % Add term for mean excitation size
+        p=p*exp(-2e-4*(MeanExSize-20)^2);
+    end 
 end
