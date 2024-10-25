@@ -27,10 +27,10 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
     Statistics.MeanActin=0;
     return;
     end
-    dt=0.1; % Stability limit is 0.4
-    tf = 240;
+    dt = 0.5; % Stability limit is 1
+    tf = 200;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = 50:50:200;
+    tsaves = [];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -44,10 +44,10 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
     ForceFactor=0.4/gw;
     nFilSt = ceil(500/MaxLength);
     ActinUpdate=1;
-    saveEvery=10;
+    saveEvery=floor(1e-6+1/dt);
     
     L=20;
-    Nx=L/gw; % The grid spacing 
+    Nx=L/gw*1/2; % The grid spacing 
     dx=L/Nx;
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
@@ -119,6 +119,9 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
         if (max(abs(u(:)) > 1e5))
             warning('Rejecting because of unstable simulation')
             Statistics.MeanActin=0;
+            Statistics.DiffNorm=inf;
+            Statistics.AvgExcitation=0;
+            Statistics.NumExcitations=0;
             return;
         end
         if (sum(abs(iT*dt-tsaves)<1e-10)>0)

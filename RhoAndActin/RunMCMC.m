@@ -1,19 +1,22 @@
 Bement=1;
 nWalker = 50;
 nSamp = 500; % samples per ensemble
-nSeed = 10; % averages per parameter set
+nSeed = 5; % averages per parameter set
 nParams = 6;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
 if (Bement)
     ZeroEr=14.4;
-    PStart=[0.8;0.4;12.7;0.5;4.3;0.16];
+    load('SortedParameters.mat')
+    ParamsStart=AllParametersSort(:,1:nWalker);
+    CurrentParams=ParamsStart(:);
 else
     ZeroEr=261.6;
-    PStart=[0.84;0.42;9.9;4.7;3.0;0.44];
+    load('SortedParametersCE.mat')
+    ParamsStart=AllParametersSort(:,1:nWalker);
+    CurrentParams=ParamsStart(:);
 end
 AllDiffNorms=zeros(nSeed,nSamp,nWalker);
 AllParameters=zeros(nParams*nWalker,nSamp);
-CurrentParams=repmat(PStart,nWalker,1)+randn(nParams*nWalker,1)*0.02;
 AllMeanActins=zeros(nSeed,nSamp,nWalker);
 AllAverageExSize = zeros(nSeed,nSamp,nWalker);
 AllNumEx = zeros(nSeed,nSamp,nWalker);
@@ -46,7 +49,9 @@ for iSamp=1:nSamp
             Params = CurrentParams((k-1)*nParams+1:k*nParams);
         end
         for seed=1:nSeed
+            tic
             Stats=RhoAndActin(Params,seed,ZeroEr);
+            toc
             % The criterion for moving on is a larger norm than zero PLUS a
             % local max (-1) in the cross correlation at (0,0)
             if (abs(Stats.DiffNorm-ZeroEr) < 1e-5)
@@ -59,10 +64,10 @@ for iSamp=1:nSamp
             AllAverageExSize(seed,iSamp,k)=mean(Stats.AvgExcitation);
             AllNumEx(seed,iSamp,k)=mean(Stats.NumExcitations);
             if (ForgetIt) % Throw out really bad parameter sets
-                AllDiffNorms(seed+1:end,iSamp,k)=AllDiffNorms(seed,iSamp);
-                AllMeanActins(seed+1:end,iSamp,k)=AllMeanActins(seed,iSamp);
-                AllAverageExSize(seed+1:end,iSamp,k)=AllAverageExSize(seed,iSamp);
-                AllNumEx(seed+1:end,iSamp,k)=AllNumEx(seed,iSamp);
+                AllDiffNorms(seed+1:end,iSamp,k)=AllDiffNorms(seed,iSamp,k);
+                AllMeanActins(seed+1:end,iSamp,k)=AllMeanActins(seed,iSamp,k);
+                AllAverageExSize(seed+1:end,iSamp,k)=AllAverageExSize(seed,iSamp,k);
+                AllNumEx(seed+1:end,iSamp,k)=AllNumEx(seed,iSamp,k);
                 break;
             end
         end
@@ -88,7 +93,7 @@ for iSamp=1:nSamp
             end
         end
     end
-    if (mod(iSamp,50)==0)
+    if (mod(iSamp,10)==0)
         if (Bement)
             save('MCMCBementRun.mat')
         else
@@ -96,7 +101,6 @@ for iSamp=1:nSamp
         end
     end
 end
-exit;
 
 function a = inRange(Params,Range)
     % Check first one and then modify second
