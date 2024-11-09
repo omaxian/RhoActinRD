@@ -1,8 +1,8 @@
 % Bounds for params
 nSamp = 1000;
-nSeed = 10;
+nSeed = 5;
 nParams = 6;
-ZeroEr = 261.6;
+ZeroEr = 860.5;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
 AllDiffNorms=zeros(nSeed,nSamp);
 AllParameters=zeros(nParams,nSamp);
@@ -10,15 +10,17 @@ AllMeanActins=zeros(nSeed,nSamp);
 AllAverageExSize = zeros(nSeed,nSamp);
 AllNumEx = zeros(nSeed,nSamp);
 rng(1);
+load('PulseRunParams.mat')
 for iSamp=1:nSamp
     % Make some random params in box
-    r1=rand(6,1);
-    params = PBounds(:,1)+r1.*(PBounds(:,2)-PBounds(:,1));
-    % Adjustment for actin inhibition
-    NewBoundsKinh = [max(PBounds(2,1)-params(1),0.2) PBounds(2,2)-params(1)];
-    params(2) = NewBoundsKinh(1)+r1(2)*(NewBoundsKinh(2)-NewBoundsKinh(1));
-    params(1) = 0.8;
-    params(2) = 0.4;
+%     r1=rand(6,1);
+    params = AllParameters(:,iSamp);
+%     params=PBounds(:,1)+r1.*(PBounds(:,2)-PBounds(:,1));
+%     % Adjustment for actin inhibition
+%     NewBoundsKinh = [max(PBounds(2,1)-params(1),0.2) PBounds(2,2)-params(1)];
+%     params(2) = NewBoundsKinh(1)+r1(2)*(NewBoundsKinh(2)-NewBoundsKinh(1));
+%     params(1) = 0.8;
+%     params(2) = 0.4;
     close all;
     for seed=1:nSeed
         Stats=RhoAndActin(params,seed,ZeroEr);

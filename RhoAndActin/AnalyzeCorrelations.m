@@ -2,8 +2,10 @@
 MovieNum=3;
 pxlSize = 0.1;
 FrTime = 0.3;
-Rho=double(load(strcat('NMYRho_',num2str(MovieNum),'.mat')).RhoData);
-Actin=double(load(strcat('NMYActin_',num2str(MovieNum),'.mat')).ActinData);
+Rho=double(load(strcat('cyk1Rho_',num2str(MovieNum),'.mat')).RhoData);
+Actin=double(load(strcat('cyk1Actin_',num2str(MovieNum),'.mat')).ActinData);
+Info=load(strcat('cyk1Info_',num2str(MovieNum),'.mat'));
+FName=Info.Info.Name;
 % Bement data
 % pxlSize = 120/212;
 % FrTime = 330/72;
@@ -12,19 +14,61 @@ Actin=double(load(strcat('NMYActin_',num2str(MovieNum),'.mat')).ActinData);
 % %Difference subtraction (removes static signal)
 % Rho=Rho-Rho(:,:,end);
 % Actin=Actin-Actin(:,:,end);
+% Adjust so that each frame has same mean
+GlobalMeanRho=mean(Rho(:));
+GlobalMeanActin=mean(Actin(:));
+[ny,nx,nFr]=size(Rho);
+for iT=1:nFr
+    Rho(:,:,iT)=Rho(:,:,iT)-mean(mean(Rho(:,:,iT)))+GlobalMeanRho;
+    Actin(:,:,iT)=Actin(:,:,iT)-mean(mean(Actin(:,:,iT)))+GlobalMeanActin;
+end
 % Filter data
-nModes=inf;
-Rho = FilterData(Rho,nModes);
-Actin = FilterData(Actin,nModes);
+nModes=10;
+nModesTime=10;
+% Try filtering in time too!
+FiltRho = FilterData(Rho,nModes,nModesTime);
+% Identify pulsing regions
+Thres=mean(FiltRho(:))+0.25*(max(FiltRho(:))-mean(FiltRho(:)));
+Excited=FiltRho>Thres;
+FiltActin = FilterData(Actin,nModes,nModesTime);
+NumExes=zeros(nFr,1);
+AvgExSize=zeros(nFr,1);
+AllExes=[];
+% Compute their number and average area
+for iT=1:nFr
+    L2 = bwlabel(Excited(:,:,iT));
+    nEx = max(L2(:));
+    ExSize=zeros(nEx,1);
+    for j=1:nEx
+        ExSize(j)=sum(sum(L2==j))*pxlSize^2;
+    end
+    AllExes=[AllExes;ExSize];
+    NumExes(iT)=nEx;
+    AvgExSize(iT)=mean(ExSize);
+end
+%return
+% x=(0:nx-1)*pxlSize;
+% y=(0:ny-1)*pxlSize;
+% for iT=1:10:nFr
+% imagesc(x,y,FiltRho(:,:,iT))
+% hold on
+% [xg,yg]=meshgrid(x,y);
+% ex=1.0*Excited(:,:,iT);
+% ex(ex==0)=1e-16;
+% scatter(xg(:),yg(:),1*ex(:),'filled');
+% clim([min(FiltRho(:)) max(FiltRho(:))])
+% drawnow;
+% hold off
+% end
 % Make a plot of the data
 %tsPl=[0:4:20];
-tsPl=[10 20 30];
+tsPl=[20 40 60];
 FrPl=ceil(tsPl/FrTime)+1;
 %Nx=length(xc);
 Nx=200;
 x=(0:Nx-1)*pxlSize;
 y=(0:Nx-1)*pxlSize;
-tiledlayout(2,length(tsPl),'Padding', 'none', 'TileSpacing', 'compact');
+tiledlayout(3,length(tsPl),'Padding', 'none', 'TileSpacing', 'compact');
 for iP=1:length(tsPl)
     nexttile
     imagesc(x,y,Rho(:,:,FrPl(iP)));
@@ -32,16 +76,35 @@ for iP=1:length(tsPl)
     if (iP==1)
         ylabel('Rho concentration')
     end
+    clim([min(Rho(:)) max(Rho(:))])
 end
 for iP=1:length(tsPl)
     nexttile
-    imagesc(x,y,Actin(:,:,FrPl(iP)));
+    imagesc(x,y,FiltRho(:,:,FrPl(iP)));
+    title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
     if (iP==1)
-        ylabel('Actin concentration')
+        ylabel('Rho concentration')
+    end
+    clim([min(FiltRho(:)) max(FiltRho(:))])
+end
+for iP=1:length(tsPl)
+    nexttile
+    L2 = bwlabel(Excited(:,:,FrPl(iP)));
+    imagesc(x,y,L2);
+    title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
+    if (iP==1)
+        ylabel('Rho concentration')
     end
 end
+% for iP=1:length(tsPl)
+%     nexttile
+%     imagesc(x,y,Actin(:,:,FrPl(iP)));
+%     if (iP==1)
+%         ylabel('Actin concentration')
+%     end
+% end
 colormap turbo
-
+%return
 
 figure;
 padxy=1;
@@ -79,6 +142,42 @@ a=clim;
 clim([-max(abs(a)) max(abs(a))]);
 colormap turbo
 
+
+figure;
+padxy=1;
+tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+nexttile
+[Uvals,dtvals,DistsByR] = CrossCorrelations(pxlSize,pxlSize,FrTime,...
+    FiltRho,FiltRho,padxy);
+imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
+title('FRho')
+ylim([-60 60])
+xlim([0 10])
+a=clim;
+clim([-max(abs(a)) max(abs(a))]);
+xlabel('$\Delta r$')
+ylabel('$\Delta t$')
+nexttile
+[UvalsF,dtvalsF,DistsByR_Filtered] = CrossCorrelations(pxlSize,pxlSize,FrTime,...
+    FiltRho,FiltActin,padxy);
+imagesc(UvalsF,dtvalsF,DistsByR_Filtered/max(DistsByR_Filtered(:)))
+xlabel('$\Delta r$')
+ylim([-60 60])
+xlim([0 10])
+title('Rho-Actin')
+a=clim;
+clim([-max(abs(a)) max(abs(a))]);
+nexttile
+[Uvals,dtvals,DistsByR] = CrossCorrelations(pxlSize,pxlSize,FrTime,...
+    FiltActin,FiltActin,padxy);
+imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
+xlabel('$\Delta r$')
+title('Actin')
+ylim([-60 60])
+xlim([0 10])
+a=clim;
+clim([-max(abs(a)) max(abs(a))]);
+colormap turbo
 
 
 %% This stuff is all just for testing

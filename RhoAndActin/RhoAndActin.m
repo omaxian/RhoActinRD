@@ -1,4 +1,4 @@
-function Statistics = RhoAndActin(Params,seed,ZeroEr)
+function Statistics = RhoAndActin(Params,seed)
     % Parameters:
     % koff0, rf, FullLifetime, GrShrnk, MaxLength, Nuc0 
     % in that order
@@ -12,7 +12,6 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
     koff0=Params(1);
     rf = Params(2);
     % Solve for the steady states in absence of actin
-    try
     p=0:0.001:100;
     OnRate = (kbasal+kfb*p.^3./(KFB+p.^3));
     OffRate=(koff0*p);
@@ -20,17 +19,10 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
     SgnChg=find((Net(1:end-1).*Net(2:end))<0);
     StSt=p(SgnChg);
     Nuc0=Params(6)/max(StSt)^2;
-    catch
-    warning('Automatic rejection cannot find Rho steady state(s)')
-    Statistics.DiffNorm=inf;
-    Statistics.InterpolatedSim=[];
-    Statistics.MeanActin=0;
-    return;
-    end
-    dt = 0.5; % Stability limit is 1
+    dt = 0.25; % Stability limit is 1
     tf = 200;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [];
+    tsaves = [120 140];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -104,11 +96,8 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
         end
         % Break out of simulations that aren't doing anything
         if (max(u(:)) < 1.05*min(StSt) && min(StSt) < 0.5)
-            Statistics.DiffNorm=ZeroEr;
+            Statistics.XCor=0;
             Statistics.MeanActin=0;
-            Statistics.InterpolatedSim=[];
-            Statistics.AvgExcitation=0;
-            Statistics.NumExcitations=0;
             return;
         end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*fg).*u;
@@ -118,10 +107,7 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
         u = uNew;
         if (max(abs(u(:)) > 1e5))
             warning('Rejecting because of unstable simulation')
-            Statistics.MeanActin=0;
-            Statistics.DiffNorm=inf;
-            Statistics.AvgExcitation=0;
-            Statistics.NumExcitations=0;
+            Statistics.XCor=0;
             return;
         end
         if (sum(abs(iT*dt-tsaves)<1e-10)>0)
@@ -130,7 +116,7 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
             PlotXfs{index}=Xf-floor(Xf/L)*L;
             PlotTs(index)=iT*dt;
         end
-        if (mod(iT-1,50)==0 && MakeMovie)
+        if (mod(iT-1,10)==0 && MakeMovie)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
             hold on
@@ -142,6 +128,7 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
             %clim([0 StSt(end)])
             %colormap("turbo")
             title(sprintf('$t= %1.1f$',t))
+            clim([0 max(StSt)])
             drawnow
             hold off
             movieframes(iT)=getframe(f);
@@ -151,20 +138,39 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
             AllActin(:,:,(iT-1)/saveEvery+1)=fg;
         end
     end
+    % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
-    try
-    CompareXCors;
-    Statistics.DiffNorm=DiffNorm;
-    Statistics.InterpolatedSim=InterpolatedSim;
-    Statistics.AvgExcitation=AvgExcitationSize;
-    Statistics.NumExcitations=NumExcitations;
-    catch
+    AllActin=AllActin(:,:,41:end);
+    AllRho=AllRho(:,:,41:end);
+    if (size(StSt)>1)
+        Thres=StSt(2);
+    else
+        Thres=0.5;
     end
+    RhoThres=AllRho>Thres;
+    [~,~,nFr]=size(RhoThres);
+    NumExcitations=zeros(nFr,1);
+    ExSizes=[];
+    for iT=1:nFr
+        CC = bwconncomp(RhoThres(:,:,iT));
+        L2=CC2periodic(CC,[1 1],'L');
+        NumExcitations(iT)=max(L2(:));
+        for iJ=1:max(L2(:))
+            ExSizes=[ExSizes;sum(L2(:)==iJ)/(Nx^2)*L^2];
+        end
+    end
+    [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
+        AllRho,AllActin,0);
+    Statistics.XCor=XCorsSim/max(XCorsSim(:));
+    Statistics.rSim=rSim;
+    Statistics.tSim=tSim;
+    Statistics.ExSizes=ExSizes;
+    Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
     if (0)
         figure;
         [~,nPlot]=size(PlotUs);
-        tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+        tiledlayout(1,nPlot+1,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:nPlot
             nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
@@ -183,12 +189,17 @@ function Statistics = RhoAndActin(Params,seed,ZeroEr)
             if (iT==1)
                 ylabel('$y$')
             end
+            xlabel('$x$')
         end
-        % nexttile
-        % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
-        % clim([-1 1])
-        % colorbar
-        % % 
+        nexttile
+        imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
+        clim([-1 1])
+        colorbar
+        xlabel('$\Delta r$')
+        ylabel('$\Delta t$')
+        title('Rho-actin Xcor')
+    end
+    if (0)
         figure;
         padxy=0;
         tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');

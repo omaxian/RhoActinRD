@@ -1,4 +1,4 @@
-function FiltData = FilterData(Data,nModes)  
+function FiltData = FilterData(Data,nModes,nModesTime)  
     [ny,nx,nFr]=size(Data);
     Nx=2*nx-2;
     FiltData=zeros(ny,nx,nFr);
@@ -32,5 +32,19 @@ function FiltData = FilterData(Data,nModes)
         DataHat(ksq>kFilt)=0;
         PaddedRev = ifft2(DataHat);
         FiltData(:,:,iT) = PaddedRev(1:ny,1:nx,:);
+    end
+    % Filter in time
+    if (nModesTime > 0)
+        for iX=1:nx
+            for iY=1:ny
+                TimeCoarse=reshape(FiltData(iX,iY,:),1,nFr);
+                pTime = [TimeCoarse fliplr(TimeCoarse(2:end-1))];
+                kvv=[0:nFr-1 -nFr+2:-1];
+                pHat = fft(pTime);
+                pHat(abs(kvv)>nModesTime)=0;
+                FiltTime = ifft(pHat);
+                FiltData(iX,iY,:)=FiltTime(1:nFr);
+            end
+        end
     end
 end

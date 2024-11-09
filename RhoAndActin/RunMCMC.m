@@ -1,25 +1,32 @@
-Bement=1;
-nWalker = 50;
-nSamp = 500; % samples per ensemble
-nSeed = 5; % averages per parameter set
+% Load the cross correlation function and excitation distribution
+EmType = "NMY"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
+if (EmType=="Starfish")
+    load('SortedParametersOnlyActin.mat') % Params
+    load('BementXCorsDS.mat')    % Cross corr fcn
+else
+    load('SortedParametersCEOnlyActin.mat')
+    load(strcat(EmType,"_Input.mat"));
+    DistsByR=XCorFilt;
+end
+XCorsExp=DistsByR(abs(dtvals)<tmax,abs(Uvals)<rmax)/max(DistsByR(:));
+dtvals=dtvals(abs(dtvals)<tmax);
+Uvals=Uvals(abs(Uvals)<rmax);
+WtsByR = exp(-Uvals'/2);
+WtsByT = exp(-abs(dtvals)'/25);
+TotWts=WtsByR.*WtsByT;
+XCorNorm=TotWts.*XCorsExp.*XCorsExp;
+ZeroEr = round(sum(XCorNorm(:)),1);
+nWalker = 2;
+nSamp = 3; % samples per walker
+nSeed = 3; % averages per parameter set
 nParams = 6;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
-if (Bement)
-    ZeroEr=14.4;
-    load('SortedParameters.mat')
-    ParamsStart=AllParametersSort(:,1:nWalker);
-    CurrentParams=ParamsStart(:);
-else
-    ZeroEr=261.6;
-    load('SortedParametersCE.mat')
-    ParamsStart=AllParametersSort(:,1:nWalker);
-    CurrentParams=ParamsStart(:);
-end
+ParamsStart=AllParametersSort(:,1:nWalker);
+CurrentParams=ParamsStart(:);
 AllDiffNorms=zeros(nSeed,nSamp,nWalker);
 AllParameters=zeros(nParams*nWalker,nSamp);
 AllMeanActins=zeros(nSeed,nSamp,nWalker);
-AllAverageExSize = zeros(nSeed,nSamp,nWalker);
-AllNumEx = zeros(nSeed,nSamp,nWalker);
+AllExSizeErs = zeros(nSeed,nSamp,nWalker);
 Accepted=zeros(nSamp,nWalker);
 LastAccept=ones(nWalker,1);
 for iSamp=1:nSamp
@@ -50,24 +57,33 @@ for iSamp=1:nSamp
         end
         for seed=1:nSeed
             tic
-            Stats=RhoAndActin(Params,seed,ZeroEr);
-            toc
-            % The criterion for moving on is a larger norm than zero PLUS a
-            % local max (-1) in the cross correlation at (0,0)
-            if (abs(Stats.DiffNorm-ZeroEr) < 1e-5)
-                ForgetIt=0; % It's zero
-            else
-                ForgetIt = Stats.DiffNorm > ZeroEr;
+            Stats=RhoAndActin(Params,seed);
+            % Compute the norm relative to the experiment and the
+            % difference in the excitation size (for C. elegans only)
+            ExSizeDiff=0;
+            if (EmType~="Starfish" && Stats.XCor(1)~=0)
+                xp=histcounts(Stats.ExSizes,0:dsHist:400);
+                xp=xp/(sum(xp)*dsHist);
+                ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist))...
+                    /sum(SizeHist.*SizeHist); %L^2 norm
             end
-            AllDiffNorms(seed,iSamp,k)=Stats.DiffNorm;
+            % Cross correlation difference
+            XCorEr = 1;
+            if (Stats.XCor(1)~=0) 
+                InterpolatedSim=ResampleXCor(Stats.XCor,Stats.tSim,Stats.rSim,...
+                    Uvals,dtvals,rmax,tmax);
+                XCorEr = (InterpolatedSim-XCorsExp).*(InterpolatedSim-XCorsExp);
+                XCorEr = sum(XCorEr(:).*XCorEr(:))/ZeroEr;
+            end
+            toc
+            ForgetIt = XCorEr > 1;
+            AllDiffNorms(seed,iSamp,k)=XCorEr;
             AllMeanActins(seed,iSamp,k)=Stats.MeanActin;
-            AllAverageExSize(seed,iSamp,k)=mean(Stats.AvgExcitation);
-            AllNumEx(seed,iSamp,k)=mean(Stats.NumExcitations);
+            AllExSizeErs(seed,iSamp,k)=ExSizeDiff;
             if (ForgetIt) % Throw out really bad parameter sets
                 AllDiffNorms(seed+1:end,iSamp,k)=AllDiffNorms(seed,iSamp,k);
                 AllMeanActins(seed+1:end,iSamp,k)=AllMeanActins(seed,iSamp,k);
-                AllAverageExSize(seed+1:end,iSamp,k)=AllAverageExSize(seed,iSamp,k);
-                AllNumEx(seed+1:end,iSamp,k)=AllNumEx(seed,iSamp,k);
+                AllExSizeErs(seed+1:end,iSamp,k)=AllExSizeErs(seed,iSamp,k);
                 break;
             end
         end
@@ -75,16 +91,15 @@ for iSamp=1:nSamp
         % Calculate relevant statistics
         MeanEr = mean(AllDiffNorms(:,iSamp,k));
         MeanActin = mean(AllMeanActins(:,iSamp,k));
-        MeanExSize = mean(AllAverageExSize(:,iSamp,k));
+        MeanExSizeEr = mean(AllExSizeErs(:,iSamp,k));
         if (iSamp > 1)
             MeanErPrev = mean(AllDiffNorms(:,LastAccept(k),k));
             MeanActinPrev = mean(AllMeanActins(:,LastAccept(k),k));
-            MeanExSizePrev = mean(AllAverageExSize(:,LastAccept(k),k));
-            Ell = Likelihood(MeanEr,ZeroEr);
-            PrevEll = Likelihood(MeanErPrev,ZeroEr);
-            Pr = Prior(MeanEr,MeanActin,MeanExSize,ZeroEr);
-            PrevPr = Prior(MeanErPrev,MeanActinPrev,...
-                MeanExSizePrev,ZeroEr);
+            MeanExSizeErPrev = mean(AllExSizeErs(:,LastAccept(k),k));
+            Ell = Likelihood(MeanEr,MeanExSizeEr);
+            PrevEll = Likelihood(MeanErPrev,MeanExSizeErPrev);
+            Pr = Prior(MeanEr,MeanActin);
+            PrevPr = Prior(MeanErPrev,MeanActinPrev);
             pAcc=z^(nParams-1)*(Ell*Pr)/(PrevEll*PrevPr);
             if (rand < pAcc) % accept
                 LastAccept(k)=iSamp;
@@ -93,12 +108,8 @@ for iSamp=1:nSamp
             end
         end
     end
-    if (mod(iSamp,10)==0)
-        if (Bement)
-            save('MCMCBementRun.mat')
-        else
-            save('MCMCCERun.mat')
-        end
+    if (mod(iSamp,5)==0)
+        save(strcat(EmType,'MCMCRun.mat'))
     end
 end
 
@@ -115,17 +126,13 @@ function a = inRange(Params,Range)
     a = sum(x1)==length(Params);
 end
 
-function ell = Likelihood(Ebar,E0)
-    kT=E0/7;
-    ell=exp(-Ebar/kT);
+function ell = Likelihood(Ebar,ExSizeEr)
+    kT=1/7;
+    ell=exp(-(Ebar+ExSizeEr)/kT);
 end
 
-function p = Prior(MeanEr,MeanActin,MeanExSize,ZeroEr)
+function p = Prior(MeanEr,MeanActin)
     % Penalize mean actin < 0.2 and high errors
     p = exp(-200*(MeanActin-0.2)^2*(MeanActin<0.2))...
-       *exp(-50*(MeanEr/ZeroEr-1)*(MeanEr>ZeroEr));
-    if (ZeroEr > 20) % hack for Baixue
-        % Add term for mean excitation size
-        p=p*exp(-2e-4*(MeanExSize-20)^2);
-    end 
+       *exp(-50*(MeanEr-1)*(MeanEr>1));
 end
