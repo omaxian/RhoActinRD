@@ -1,5 +1,5 @@
 % Load the cross correlation function and excitation distribution
-EmType = "NMY"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
+EmType = "Cyk1"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
 if (EmType=="Starfish")
     load('SortedParametersOnlyActin.mat') % Params
     load('BementXCorsDS.mat')    % Cross corr fcn
@@ -12,13 +12,13 @@ XCorsExp=DistsByR(abs(dtvals)<tmax,abs(Uvals)<rmax)/max(DistsByR(:));
 dtvals=dtvals(abs(dtvals)<tmax);
 Uvals=Uvals(abs(Uvals)<rmax);
 WtsByR = exp(-Uvals'/2);
-WtsByT = exp(-abs(dtvals)'/25);
+WtsByT = exp(-abs(dtvals)'/60);
 TotWts=WtsByR.*WtsByT;
-XCorNorm=TotWts.*XCorsExp.*XCorsExp;
+XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
-nWalker = 2;
-nSamp = 3; % samples per walker
-nSeed = 3; % averages per parameter set
+nWalker = 20;
+nSamp = 500; % samples per walker
+nSeed = 5; % averages per parameter set
 nParams = 6;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
 ParamsStart=AllParametersSort(:,1:nWalker);
@@ -61,19 +61,24 @@ for iSamp=1:nSamp
             % Compute the norm relative to the experiment and the
             % difference in the excitation size (for C. elegans only)
             ExSizeDiff=0;
-            if (EmType~="Starfish" && Stats.XCor(1)~=0)
-                xp=histcounts(Stats.ExSizes,0:dsHist:400);
-                xp=xp/(sum(xp)*dsHist);
-                ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist))...
-                    /sum(SizeHist.*SizeHist); %L^2 norm
+            if (EmType~="Starfish")
+                if (Stats.XCor(1)==0)
+                    ExSizeDiff=1;
+                else
+                    WtsEx=(dsHist/2:dsHist:400);
+                    xp=histcounts(Stats.ExSizes,0:dsHist:400);
+                    xp=xp/(sum(xp)*dsHist);
+                    ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
+                        /sum(SizeHist.*SizeHist.*WtsEx); %L^2 norm
+                end
             end
             % Cross correlation difference
             XCorEr = 1;
             if (Stats.XCor(1)~=0) 
                 InterpolatedSim=ResampleXCor(Stats.XCor,Stats.tSim,Stats.rSim,...
                     Uvals,dtvals,rmax,tmax);
-                XCorEr = (InterpolatedSim-XCorsExp).*(InterpolatedSim-XCorsExp);
-                XCorEr = sum(XCorEr(:).*XCorEr(:))/ZeroEr;
+                XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
+                XCorEr = sum(XCorEr(:))/ZeroEr;
             end
             toc
             ForgetIt = XCorEr > 1;
