@@ -1,16 +1,13 @@
 % Load the cross correlation function and excitation distribution
-EmType = "Cyk1"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
+EmType = "Ani-NMY"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
 if (EmType=="Starfish")
     load('SortedParametersOnlyActin.mat') % Params
     load('BementXCorsDS.mat')    % Cross corr fcn
 else
     load('SortedParametersCEOnlyActin.mat')
     load(strcat(EmType,"_Input.mat"));
-    DistsByR=XCorFilt;
+    XCorsExp=XCorFilt;
 end
-XCorsExp=DistsByR(abs(dtvals)<tmax,abs(Uvals)<rmax)/max(DistsByR(:));
-dtvals=dtvals(abs(dtvals)<tmax);
-Uvals=Uvals(abs(Uvals)<rmax);
 WtsByR = exp(-Uvals'/2);
 WtsByT = exp(-abs(dtvals)'/60);
 TotWts=WtsByR.*WtsByT;
@@ -76,7 +73,7 @@ for iSamp=1:nSamp
             XCorEr = 1;
             if (Stats.XCor(1)~=0) 
                 InterpolatedSim=ResampleXCor(Stats.XCor,Stats.tSim,Stats.rSim,...
-                    Uvals,dtvals,rmax,tmax);
+                    Uvals,dtvals,max(Uvals)+1e-3,max(dtvals)+1e-3);
                 XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
                 XCorEr = sum(XCorEr(:))/ZeroEr;
             end
