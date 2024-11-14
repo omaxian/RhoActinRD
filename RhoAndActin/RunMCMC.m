@@ -1,10 +1,24 @@
 % Load the cross correlation function and excitation distribution
 EmType = "Ani-NMY"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
+ActinOnly = 0;
+LoadExisting = 0;
+if (LoadExisting)
+    if (ActinOnly)
+        load(strcat(EmType,'MCMCRun.mat'))
+    else
+        load(strcat(EmType,'MCMCRun_All.mat'))
+    end
+    SampStart=iSamp+1;
+else
 if (EmType=="Starfish")
     load('SortedParametersOnlyActin.mat') % Params
     load('BementXCorsDS.mat')    % Cross corr fcn
 else
-    load('SortedParametersCEOnlyActin.mat')
+    if (ActinOnly)
+        load('SortedParametersCEOnlyActin.mat')
+    else
+        load('SortedParametersCE.mat')
+    end
     load(strcat(EmType,"_Input.mat"));
     XCorsExp=XCorFilt;
 end
@@ -13,7 +27,11 @@ WtsByT = exp(-abs(dtvals)'/60);
 TotWts=WtsByR.*WtsByT;
 XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
-nWalker = 20;
+if (ActinOnly)
+    nWalker = 20;
+else
+    nWalker=50;
+end
 nSamp = 500; % samples per walker
 nSeed = 5; % averages per parameter set
 nParams = 6;
@@ -26,7 +44,9 @@ AllMeanActins=zeros(nSeed,nSamp,nWalker);
 AllExSizeErs = zeros(nSeed,nSamp,nWalker);
 Accepted=zeros(nSamp,nWalker);
 LastAccept=ones(nWalker,1);
-for iSamp=1:nSamp
+SampStart=1;
+end
+for iSamp=SampStart:nSamp
     iSamp
     for k=1:nWalker
         if (iSamp>1)
@@ -111,7 +131,11 @@ for iSamp=1:nSamp
         end
     end
     if (mod(iSamp,5)==0)
-        save(strcat(EmType,'MCMCRun.mat'))
+        if (ActinOnly)
+            save(strcat(EmType,'MCMCRun.mat'))
+        else
+            save(strcat(EmType,'MCMCRun_All.mat'))
+        end
     end
 end
 
