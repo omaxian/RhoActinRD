@@ -1,7 +1,8 @@
 % Load the cross correlation function and excitation distribution
-EmType = "Ani-NMY"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
-ActinOnly = 0;
-LoadExisting = 0;
+addpath('Inputs/')
+EmType = "nmy"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
+ActinOnly = 1;
+LoadExisting = 1;
 if (LoadExisting)
     if (ActinOnly)
         load(strcat(EmType,'MCMCRun.mat'))
@@ -23,16 +24,17 @@ else
     XCorsExp=XCorFilt;
 end
 WtsByR = exp(-Uvals'/2);
-WtsByT = exp(-abs(dtvals)'/60);
+WtsByT = exp(-abs(dtvals)'/120);
 TotWts=WtsByR.*WtsByT;
 XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
 if (ActinOnly)
     nWalker = 20;
+    nSamp=750;
 else
     nWalker=50;
+    nSamp=500;
 end
-nSamp = 500; % samples per walker
 nSeed = 5; % averages per parameter set
 nParams = 6;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
@@ -137,28 +139,4 @@ for iSamp=SampStart:nSamp
             save(strcat(EmType,'MCMCRun_All.mat'))
         end
     end
-end
-
-function a = inRange(Params,Range)
-    % Check first one and then modify second
-    x1 = Params(1) > Range(1,1) && Params(1) < Range(1,2);
-    if (~x1)
-        a=0;
-        return;
-    end
-    Range(2,:)=Range(2,:)-Params(1);
-    Range(2,1)=max(Range(2,1),0.2);
-    x1 = Params > Range(:,1) & Params < Range(:,2);
-    a = sum(x1)==length(Params);
-end
-
-function ell = Likelihood(Ebar,ExSizeEr)
-    kT=1/7;
-    ell=exp(-(Ebar+ExSizeEr)/kT);
-end
-
-function p = Prior(MeanEr,MeanActin)
-    % Penalize mean actin < 0.2 and high errors
-    p = exp(-200*(MeanActin-0.2)^2*(MeanActin<0.2))...
-       *exp(-50*(MeanEr-1)*(MeanEr>1));
 end
