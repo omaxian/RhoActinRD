@@ -1,5 +1,6 @@
 % Load the cross correlation function and excitation distribution
-EmType = "Ani-NMY"; % OPTIONS: NMY,Ani-NMU,Cyk1,Starfish
+addpath('Inputs/')
+EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn
 ActinOnly = 0;
 LoadExisting = 0;
 if (LoadExisting)
@@ -23,7 +24,7 @@ else
     XCorsExp=XCorFilt;
 end
 WtsByR = exp(-Uvals'/2);
-WtsByT = exp(-abs(dtvals)'/60);
+WtsByT = exp(-abs(dtvals)'/120);
 TotWts=WtsByR.*WtsByT;
 XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);

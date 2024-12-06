@@ -1,11 +1,17 @@
 % Cross correlation profiles in experimental data
-MovieNum=3;
+%tiledlayout(2,2,'Padding', 'none', 'TileSpacing', 'compact');
+Widths = [50];
+Threses = [0.1];
+for iFw=1:length(Widths)
+%nexttile
+for iThr=1:length(Threses)
+%MovieNum=3;
 pxlSize = 0.1;
-FrTime = 0.3;
-Rho=double(load(strcat('cyk1Rho_',num2str(MovieNum),'.mat')).RhoData);
-Actin=double(load(strcat('cyk1Actin_',num2str(MovieNum),'.mat')).ActinData);
-Info=load(strcat('cyk1Info_',num2str(MovieNum),'.mat'));
+Rho=double(load(strcat(Name,'Rho_',num2str(MovieNum),'.mat')).RhoData);
+Actin=double(load(strcat(Name,'Actin_',num2str(MovieNum),'.mat')).ActinData);
+Info=load(strcat(Name,'Info_',num2str(MovieNum),'.mat'));
 FName=Info.Info.Name;
+FrTime = Info.Info.TimeInt;
 % Bement data
 % pxlSize = 120/212;
 % FrTime = 330/72;
@@ -23,14 +29,37 @@ for iT=1:nFr
     Actin(:,:,iT)=Actin(:,:,iT)-mean(mean(Actin(:,:,iT)))+GlobalMeanActin;
 end
 % Filter data
-nModes=10;
-nModesTime=10;
-% Try filtering in time too!
-FiltRho = FilterData(Rho,nModes,nModesTime);
-% Identify pulsing regions
-Thres=mean(FiltRho(:))+0.25*(max(FiltRho(:))-mean(FiltRho(:)));
+%nModes=10;
+%nModesTime=10;
+%FiltRho = FilterData(Rho,Widths(iFw),Widths(iFw));
+Filtx=smoothdata(Rho,1,'sgolay',Widths(iFw));
+Filtxy=smoothdata(Filtx,2,'sgolay',Widths(iFw));
+FiltRho=smoothdata(Filtxy,3,'sgolay',Widths(iFw));
+% % Identify pulsing regions
+Thres=mean(FiltRho(:))+Threses(iThr)*(max(FiltRho(:))-mean(FiltRho(:)));
 Excited=FiltRho>Thres;
-FiltActin = FilterData(Actin,nModes,nModesTime);
+% tsPl=[20 40 60];
+% FrPl=ceil(tsPl/FrTime)+1;
+% Nx=200;
+% x=(0:Nx-1)*pxlSize;
+% y=(0:Nx-1)*pxlSize;
+% figure;
+% tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+% for iP=1:length(tsPl)
+% nexttile
+% L2 = bwlabel(Excited(:,:,FrPl(iP)));
+% imagesc(x,y,L2);
+% title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
+% %clim([min(FiltRho(:)) max(FiltRho(:))])
+% pbaspect([1 1 1])
+% colormap turbo
+% end
+% end
+% end
+%FiltActin = FilterData(Actin,nModes,nModesTime);
+Filtx=smoothdata(Actin,1,'sgolay',Widths(iFw));
+Filtxy=smoothdata(Filtx,2,'sgolay',Widths(iFw));
+FiltActin=smoothdata(Filtxy,3,'sgolay',Widths(iFw));
 NumExes=zeros(nFr,1);
 AvgExSize=zeros(nFr,1);
 AllExes=[];
@@ -46,8 +75,26 @@ for iT=1:nFr
     NumExes(iT)=nEx;
     AvgExSize(iT)=mean(ExSize);
 end
-%return
-% x=(0:nx-1)*pxlSize;
+% Cross correlation
+[UvalsF,dtvalsF,DistsByRF] = CrossCorrelations(pxlSize,pxlSize,FrTime,...
+    FiltRho,FiltActin,1);
+DistsByRF=DistsByRF/max(DistsByRF(:));
+DistsByRF=DistsByRF(abs(dtvalsF)<tmax,abs(UvalsF)<rmax)/max(DistsByRF(:));
+dtvalsF=dtvalsF(abs(dtvalsF)<tmax);
+UvalsF=UvalsF(abs(UvalsF)<rmax);
+WtsByR = exp(-UvalsF'/2);
+WtsByT = exp(-abs(dtvalsF)'/60);
+TotWts=WtsByR.*WtsByT;
+XCorNorm=TotWts.*DistsByRF.^2;
+XCorNorm=sum(XCorNorm(:))
+end
+end
+% figure;
+% imagesc(UvalsF,dtvalsF,DistsByRF/max(DistsByRF(:)))
+% xlabel('$\Delta r$')
+% ylim([-tmax tmax])
+% xlim([0 rmax])
+% title('Rho-Actin')% x=(0:nx-1)*pxlSize;
 % y=(0:ny-1)*pxlSize;
 % for iT=1:10:nFr
 % imagesc(x,y,FiltRho(:,:,iT))
@@ -62,49 +109,7 @@ end
 % end
 % Make a plot of the data
 %tsPl=[0:4:20];
-tsPl=[20 40 60];
-FrPl=ceil(tsPl/FrTime)+1;
-%Nx=length(xc);
-Nx=200;
-x=(0:Nx-1)*pxlSize;
-y=(0:Nx-1)*pxlSize;
-tiledlayout(3,length(tsPl),'Padding', 'none', 'TileSpacing', 'compact');
-for iP=1:length(tsPl)
-    nexttile
-    imagesc(x,y,Rho(:,:,FrPl(iP)));
-    title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
-    if (iP==1)
-        ylabel('Rho concentration')
-    end
-    clim([min(Rho(:)) max(Rho(:))])
-end
-for iP=1:length(tsPl)
-    nexttile
-    imagesc(x,y,FiltRho(:,:,FrPl(iP)));
-    title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
-    if (iP==1)
-        ylabel('Rho concentration')
-    end
-    clim([min(FiltRho(:)) max(FiltRho(:))])
-end
-for iP=1:length(tsPl)
-    nexttile
-    L2 = bwlabel(Excited(:,:,FrPl(iP)));
-    imagesc(x,y,L2);
-    title(sprintf('$t= %1.1f$',FrTime*(FrPl(iP)-1)))
-    if (iP==1)
-        ylabel('Rho concentration')
-    end
-end
-% for iP=1:length(tsPl)
-%     nexttile
-%     imagesc(x,y,Actin(:,:,FrPl(iP)));
-%     if (iP==1)
-%         ylabel('Actin concentration')
-%     end
-% end
-colormap turbo
-%return
+return
 
 figure;
 padxy=1;
