@@ -108,6 +108,7 @@ function Statistics = RhoAndActin(Params,seed)
         if (max(abs(u(:)) > 1e5))
             warning('Rejecting because of unstable simulation')
             Statistics.XCor=0;
+	    Statistics.MeanActin=0;
             return;
         end
         if (sum(abs(iT*dt-tsaves)<1e-10)>0)

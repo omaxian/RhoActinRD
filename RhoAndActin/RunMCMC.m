@@ -30,10 +30,11 @@ XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
 if (ActinOnly)
     nWalker = 20;
+    nSamp=750;
 else
     nWalker=50;
+    nSamp=500;
 end
-nSamp = 500; % samples per walker
 nSeed = 5; % averages per parameter set
 nParams = 6;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
