@@ -1,13 +1,13 @@
 % Load the cross correlation function and excitation distribution
 addpath('Inputs/')
-EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn
-ActinOnly = 0;
+EmType = "nmy"; % nmy, nmy-cyk, nmy-pfn
+ActinOnly = 1;
 LoadExisting = 0;
 if (LoadExisting)
     if (ActinOnly)
-        load(strcat(EmType,'MCMCRun.mat'))
+        load(strcat(EmType,'MCMCRun_NoWt.mat'))
     else
-        load(strcat(EmType,'MCMCRun_All.mat'))
+        load(strcat(EmType,'MCMCRun_NoWt_All.mat'))
     end
     SampStart=iSamp+1;
 else
@@ -23,9 +23,10 @@ else
     load(strcat(EmType,"_Input.mat"));
     XCorsExp=XCorFilt;
 end
-WtsByR = exp(-Uvals'/2);
-WtsByT = exp(-abs(dtvals)'/120);
-TotWts=WtsByR.*WtsByT;
+%WtsByR = exp(-Uvals'/2);
+%WtsByT = exp(-abs(dtvals)'/120);
+%TotWts=WtsByR.*WtsByT;
+TotWts=ones(length(dtvals),length(Uvals));
 XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
 if (ActinOnly)
@@ -40,10 +41,11 @@ nParams = 6;
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
 ParamsStart=AllParametersSort(:,1:nWalker);
 CurrentParams=ParamsStart(:);
-AllDiffNorms=zeros(nSeed,nSamp,nWalker);
+AllDiffNorms=zeros(nSamp,nWalker);
 AllParameters=zeros(nParams*nWalker,nSamp);
-AllMeanActins=zeros(nSeed,nSamp,nWalker);
-AllExSizeErs = zeros(nSeed,nSamp,nWalker);
+AllMeanActins=zeros(nSamp,nWalker);
+AllExSizeErs = zeros(nSamp,nWalker);
+Nnzs = zeros(nSamp,nWalker);
 Accepted=zeros(nSamp,nWalker);
 LastAccept=ones(nWalker,1);
 SampStart=1;
@@ -74,52 +76,64 @@ for iSamp=SampStart:nSamp
         else
             Params = CurrentParams((k-1)*nParams+1:k*nParams);
         end
+        ExSizesAll=[];
+        nNz=0;
+        TotActin=0;
         for seed=1:nSeed
-            tic
             Stats=RhoAndActin(Params,seed);
             % Compute the norm relative to the experiment and the
             % difference in the excitation size (for C. elegans only)
-            ExSizeDiff=0;
             if (EmType~="Starfish")
                 if (Stats.XCor(1)==0)
-                    ExSizeDiff=1;
                 else
-                    WtsEx=(dsHist/2:dsHist:400);
-                    xp=histcounts(Stats.ExSizes,0:dsHist:400);
-                    xp=xp/(sum(xp)*dsHist);
-                    ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
-                        /sum(SizeHist.*SizeHist.*WtsEx); %L^2 norm
+                    ExSizesAll=[ExSizesAll;Stats.ExSizes];
                 end
             end
             % Cross correlation difference
             XCorEr = 1;
             if (Stats.XCor(1)~=0) 
-                InterpolatedSim=ResampleXCor(Stats.XCor,Stats.tSim,Stats.rSim,...
-                    Uvals,dtvals,max(Uvals)+1e-3,max(dtvals)+1e-3);
-                XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
-                XCorEr = sum(XCorEr(:))/ZeroEr;
-            end
-            toc
-            ForgetIt = XCorEr > 1;
-            AllDiffNorms(seed,iSamp,k)=XCorEr;
-            AllMeanActins(seed,iSamp,k)=Stats.MeanActin;
-            AllExSizeErs(seed,iSamp,k)=ExSizeDiff;
-            if (ForgetIt) % Throw out really bad parameter sets
-                AllDiffNorms(seed+1:end,iSamp,k)=AllDiffNorms(seed,iSamp,k);
-                AllMeanActins(seed+1:end,iSamp,k)=AllMeanActins(seed,iSamp,k);
-                AllExSizeErs(seed+1:end,iSamp,k)=AllExSizeErs(seed,iSamp,k);
-                break;
+                nNz=nNz+1;
+                if (nNz==1)
+                    XCorAvg=Stats.XCor;
+                else
+                    XCorAvg=XCorAvg+Stats.XCor;
+                end
+                TotActin=TotActin+Stats.MeanActin;
+                tSimulated=Stats.tSim;
+                rSimulated=Stats.rSim;
             end
         end
+        % Compute errors 
+        if (nNz>0)
+        XCorAvg=XCorAvg/nNz;
+        InterpolatedSim=ResampleXCor(XCorAvg,tSimulated,rSimulated,...
+                    Uvals,dtvals,max(Uvals)+1e-3,max(dtvals)+1e-3);
+        XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
+        XCorEr = sum(XCorEr(:))/ZeroEr;
+        xp=histcounts(ExSizesAll,0:dsHist:400);
+        WtsEx=ones(1,length(xp));
+        xp=xp/(sum(xp)*dsHist);
+        ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
+                /sum(SizeHist.*SizeHist.*WtsEx); %L^2 norm
+        MActin=TotActin/nNz;
+        else
+        XCorEr=1;
+        ExSizeDiff=1;
+        MActin=0;
+        end
+        Nnzs(iSamp,k)=nNz;
+        AllDiffNorms(iSamp,k)=XCorEr;
+        AllMeanActins(iSamp,k)=MActin;
+        AllExSizeErs(iSamp,k)=ExSizeDiff;
         AllParameters((k-1)*nParams+1:k*nParams,iSamp)=Params;
         % Calculate relevant statistics
-        MeanEr = mean(AllDiffNorms(:,iSamp,k));
-        MeanActin = mean(AllMeanActins(:,iSamp,k));
-        MeanExSizeEr = mean(AllExSizeErs(:,iSamp,k));
+        MeanEr = AllDiffNorms(iSamp,k);
+        MeanActin = AllMeanActins(iSamp,k);
+        MeanExSizeEr = AllExSizeErs(iSamp,k);
         if (iSamp > 1)
-            MeanErPrev = mean(AllDiffNorms(:,LastAccept(k),k));
-            MeanActinPrev = mean(AllMeanActins(:,LastAccept(k),k));
-            MeanExSizeErPrev = mean(AllExSizeErs(:,LastAccept(k),k));
+            MeanErPrev = AllDiffNorms(LastAccept(k),k);
+            MeanActinPrev = AllMeanActins(LastAccept(k),k);
+            MeanExSizeErPrev = AllExSizeErs(LastAccept(k),k);
             Ell = Likelihood(MeanEr,MeanExSizeEr);
             PrevEll = Likelihood(MeanErPrev,MeanExSizeErPrev);
             Pr = Prior(MeanEr,MeanActin);
@@ -134,9 +148,9 @@ for iSamp=SampStart:nSamp
     end
     if (mod(iSamp,5)==0)
         if (ActinOnly)
-            save(strcat(EmType,'MCMCRun.mat'))
+            save(strcat(EmType,'MCMCRun_NoWt.mat'))
         else
-            save(strcat(EmType,'MCMCRun_All.mat'))
+            save(strcat(EmType,'MCMCRun_NoWt_All.mat'))
         end
     end
 end
