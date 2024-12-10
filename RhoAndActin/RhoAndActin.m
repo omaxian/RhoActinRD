@@ -5,7 +5,7 @@ function Statistics = RhoAndActin(Params,seed)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=1;
+    MakeMovie=0;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -108,7 +108,7 @@ function Statistics = RhoAndActin(Params,seed)
         if (max(abs(u(:)) > 1e5))
             warning('Rejecting because of unstable simulation')
             Statistics.XCor=0;
-	    Statistics.MeanActin=0;
+	        Statistics.MeanActin=0;
             return;
         end
         if (sum(abs(iT*dt-tsaves)<1e-10)>0)
@@ -169,7 +169,7 @@ function Statistics = RhoAndActin(Params,seed)
     Statistics.ExSizes=ExSizes;
     Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
-    if (1)
+    if (0)
         figure;
         [~,nPlot]=size(PlotUs);
 %         tiledlayout(1,nPlot+2,'Padding', 'none', 'TileSpacing', 'compact');

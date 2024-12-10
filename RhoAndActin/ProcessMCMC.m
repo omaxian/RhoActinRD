@@ -1,4 +1,4 @@
-EmType='Cyk1';
+EmType='nmy-cyk';
 load(strcat(EmType,'MCMCRun.mat'))
 nP=nParams;
 % For MCMC
@@ -32,7 +32,7 @@ Ap4Inds=inds(AllParameters(1,inds)<0.55);
 inds=setdiff(inds,Ap4Inds);
 % re-order indices
 [v,x]=sort(LogLikelihood,'descend');
-inds=x(end-49:end);
+%inds=x(end-49:end);
 %AllParameters(6,:)=TwoMeanActins;
 xIndex = [1 3 4 7];
 yIndex = [2 5 6 8];
@@ -42,10 +42,10 @@ yLabels = ["$k_\textrm{inh}$" "$\ell_\textrm{max}$" "$\bar q_0$" ...
     "$\bar{q}_0 \ell_\textrm{max}$"];
 xLimits = [0.4 1.22 0 30 0 5 0 30];
 yLimits = [0.2 1.1 0 10 0 1 0 8];
-%tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-for iP=2:4
-%nexttile
-subplot(1,3,iP-1)
+tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
+for iP=2:3
+nexttile
+%subplot(1,2,iP-1)
 if (iP==1)
 plot([0.55 0.55],[0 3],':k')
 hold on
@@ -58,10 +58,10 @@ end
 %     10,'^','filled', 'MarkerFaceColor',[1 0.6 0.78]) % pink
 % scatter(AllParameters(xIndex(iP),Ap4Inds),AllParameters(yIndex(iP),Ap4Inds),...
 %     10,LogLikelihood(Ap4Inds),'o','filled')
-%scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
-%    10,LogLikelihood(inds),'s','filled')
 scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
-    's','filled')
+    10,LogLikelihood(inds),'s','filled')
+%scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
+%    's','filled')
 %hold on
 % if (iP==4)
 %     k=convhull(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds));
@@ -80,20 +80,68 @@ ylim([yLimits(2*iP-1) yLimits(2*iP)])
 %     colorbar
 % end
 end
-return;
-figure;
-tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
-nexttile
-scatter(AllDifferencesModelExp(inds),TwoMeanActins(inds),'filled')
-xlabel('XCor Error')
-ylabel('Mean actin')
+% return;
+% figure;
+% tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
 % nexttile
-% scatter(AllDifferencesModelExp(inds),mean(AllNumEx(:,inds),'omitnan'),'filled')
-% box on
+% scatter(AllDifferencesModelExp(inds),TwoMeanActins(inds),'filled')
 % xlabel('XCor Error')
-% ylabel('Mean \# excitations')
-nexttile
-scatter(AllDifferencesModelExp(inds),mean(AllExSizeErs(:,inds),'omitnan'),'filled')
-xlabel('XCor Error')
-box on
-ylabel('Mean excitation size')
+% ylabel('Mean actin')
+% % nexttile
+% % scatter(AllDifferencesModelExp(inds),mean(AllNumEx(:,inds),'omitnan'),'filled')
+% % box on
+% % xlabel('XCor Error')
+% % ylabel('Mean \# excitations')
+% nexttile
+% scatter(AllDifferencesModelExp(inds),mean(AllExSizeErs(:,inds),'omitnan'),'filled')
+% xlabel('XCor Error')
+% box on
+% ylabel('Mean excitation size')
+% 
+% figure
+% for iWalker=1:nWalker
+% inds=(iWalker-1)*nSoFar+1:iWalker*nSoFar;
+% plInds=inds(Accepted(inds)==1);
+% Colors=1:length(plInds);
+% scatter(AllDifferencesModelExp(plInds),TwoMeanSize(plInds),36,Colors,'filled')
+% pause(1)
+% end
+
+figure
+for iWalker=1
+inds=(iWalker-1)*nSoFar+1:iWalker*nSoFar;
+plInds=inds(Accepted(inds)==1);
+plot(mod(plInds-1,nSoFar),LogLikelihood(plInds),'-o')
+hold on
+end
+
+figure
+inds=1:nSoFar*nWalker;
+plInds=inds(Accepted(inds)==1);
+[~,order]=sort(LogLikelihood(plInds),'descend');
+plInds=plInds(order);
+Colors=mod(plInds,nSoFar);
+scatter(AllDifferencesModelExp(plInds),...
+    TwoMeanSize(plInds),20,Colors,'filled')
+
+figure
+[~,ind]=min(LogLikelihood);
+[~,seed]=min(AllDiffNorms(:,ind)+AllExSizeErs(:,ind));
+Stats=RhoAndActin(AllParameters(1:6,ind),seed)
+imagesc(Stats.rSim,Stats.tSim,Stats.XCor)
+xlim([0 5])
+ylim([-120 120])
+clim([-1 1])
+colorbar
+colormap turbo
+figure
+imagesc(Uvals,dtvals,XCorsExp)
+clim([-1 1])
+colormap turbo
+ylim([-120 120])
+figure
+xp=histcounts(Stats.ExSizes,0:dsHist:400);
+xp=xp/(sum(xp)*dsHist);
+plot(dsHist/2:dsHist:400,xp)
+hold on
+plot(dsHist/2:dsHist:400,SizeHist)

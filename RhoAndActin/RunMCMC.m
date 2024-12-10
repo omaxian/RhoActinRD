@@ -1,8 +1,8 @@
 % Load the cross correlation function and excitation distribution
 addpath('Inputs/')
-EmType = "nmy"; % nmy, nmy-cyk, nmy-pfn
+EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn
 ActinOnly = 1;
-LoadExisting = 0;
+LoadExisting = 1;
 if (LoadExisting)
     if (ActinOnly)
         load(strcat(EmType,'MCMCRun_NoWt.mat'))
@@ -38,6 +38,10 @@ else
 end
 nSeed = 5; % averages per parameter set
 nParams = 6;
+nParamsV = 6;
+if (ActinOnly)
+    nParamsV=4;
+end
 PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
 ParamsStart=AllParametersSort(:,1:nWalker);
 CurrentParams=ParamsStart(:);
@@ -138,7 +142,7 @@ for iSamp=SampStart:nSamp
             PrevEll = Likelihood(MeanErPrev,MeanExSizeErPrev);
             Pr = Prior(MeanEr,MeanActin);
             PrevPr = Prior(MeanErPrev,MeanActinPrev);
-            pAcc=z^(nParams-1)*(Ell*Pr)/(PrevEll*PrevPr);
+            pAcc=z^(nParamsV-1)*(Ell*Pr)/(PrevEll*PrevPr);
             if (rand < pAcc) % accept
                 LastAccept(k)=iSamp;
                 Accepted(iSamp,k)=1;
@@ -169,7 +173,7 @@ function a = inRange(Params,Range)
 end
 
 function ell = Likelihood(Ebar,ExSizeEr)
-    kT=1/7;
+    kT = 0.08;
     ell=exp(-(Ebar+ExSizeEr)/kT);
 end
 
