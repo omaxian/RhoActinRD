@@ -1,13 +1,13 @@
 % Load the cross correlation function and excitation distribution
 addpath('Inputs/')
 EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn
-ActinOnly = 1;
-LoadExisting = 1;
+ActinOnly = 0;
+LoadExisting = 0;
 if (LoadExisting)
     if (ActinOnly)
-        load(strcat(EmType,'MCMCRun_NoWt.mat'))
+        load(strcat(EmType,'MCMCRunTwoEx_NoWt.mat'))
     else
-        load(strcat(EmType,'MCMCRun_NoWt_All.mat'))
+        load(strcat(EmType,'MCMCRunTwoEx_NoWt_All.mat'))
     end
     SampStart=iSamp+1;
 else
@@ -31,20 +31,18 @@ XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
 if (ActinOnly)
     nWalker = 20;
-    nSamp=750;
-else
-    nWalker=50;
-    nSamp=500;
-end
-nSeed = 5; % averages per parameter set
-nParams = 6;
-nParamsV = 6;
-if (ActinOnly)
     nParamsV=4;
+else
+    nWalker = 40;
+    nParamsV = 6;
 end
-PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
-ParamsStart=AllParametersSort(:,1:nWalker);
-CurrentParams=ParamsStart(:);
+nSamp = 5000;
+numNonZero = 2; % averages per parameter set
+nSeed = 10; % maximum # of attempts to get to 2
+nParams = 6;
+PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 20; 0 1];
+%ParamsStart=AllParametersSort(:,1:nWalker);
+%CurrentParams=ParamsStart(:);
 AllDiffNorms=zeros(nSamp,nWalker);
 AllParameters=zeros(nParams*nWalker,nSamp);
 AllMeanActins=zeros(nSamp,nWalker);
@@ -106,6 +104,9 @@ for iSamp=SampStart:nSamp
                 tSimulated=Stats.tSim;
                 rSimulated=Stats.rSim;
             end
+            if (nNz==numNonZero)
+                break;
+            end
         end
         % Compute errors 
         if (nNz>0)
@@ -152,9 +153,9 @@ for iSamp=SampStart:nSamp
     end
     if (mod(iSamp,5)==0)
         if (ActinOnly)
-            save(strcat(EmType,'MCMCRun_NoWt.mat'))
+            save(strcat(EmType,'MCMCRunTwoEx_NoWt.mat'))
         else
-            save(strcat(EmType,'MCMCRun_NoWt_All.mat'))
+            save(strcat(EmType,'MCMCRunTwoEx_NoWt_All.mat'))
         end
     end
 end
