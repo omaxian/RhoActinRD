@@ -1,19 +1,22 @@
 % Load the cross correlation function and excitation distribution
 addpath('Inputs/')
-EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn
-ActinOnly = 0;
+EmType = "Starfish"; % nmy, nmy-cyk, nmy-pfn, star
+ActinOnly = 1;
 LoadExisting = 0;
 if (LoadExisting)
     if (ActinOnly)
         load(strcat(EmType,'MCMCRunTwoEx_NoWt.mat'))
+        nSamp=2000;
     else
         load(strcat(EmType,'MCMCRunTwoEx_NoWt_All.mat'))
+        nSamp=1000;
     end
     SampStart=iSamp+1;
 else
 if (EmType=="Starfish")
-    load('SortedParametersOnlyActin.mat') % Params
+    %load('SortedParametersOnlyActin.mat') % Params
     load('BementXCorsDS.mat')    % Cross corr fcn
+    XCorsExp=DistsByR;
 else
     if (ActinOnly)
         load('SortedParametersCEOnlyActin.mat')
@@ -36,7 +39,7 @@ else
     nWalker = 40;
     nParamsV = 6;
 end
-nSamp = 5000;
+nSamp = 2000;
 numNonZero = 2; % averages per parameter set
 nSeed = 10; % maximum # of attempts to get to 2
 nParams = 6;
@@ -115,11 +118,15 @@ for iSamp=SampStart:nSamp
                     Uvals,dtvals,max(Uvals)+1e-3,max(dtvals)+1e-3);
         XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
         XCorEr = sum(XCorEr(:))/ZeroEr;
+        if (EmType~="Starfish")
         xp=histcounts(ExSizesAll,0:dsHist:400);
         WtsEx=ones(1,length(xp));
         xp=xp/(sum(xp)*dsHist);
         ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
                 /sum(SizeHist.*SizeHist.*WtsEx); %L^2 norm
+        else
+        ExSizeDiff=0;
+        end
         MActin=TotActin/nNz;
         else
         XCorEr=1;
