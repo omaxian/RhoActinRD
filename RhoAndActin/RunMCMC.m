@@ -2,7 +2,7 @@
 addpath('Inputs/')
 EmType = "Starfish"; % nmy, nmy-cyk, nmy-pfn, star
 ActinOnly = 1;
-LoadExisting = 0;
+LoadExisting = 1;
 if (LoadExisting)
     if (ActinOnly)
         load(strcat(EmType,'MCMCRunTwoEx_NoWt.mat'))

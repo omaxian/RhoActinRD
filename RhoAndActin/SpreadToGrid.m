@@ -56,12 +56,12 @@ function SpreadF2 = SpreadToGrid(xEpts,yEpts,IBpts,IBwts,gw)
         SpreadF2(ypts,xpts)=SpreadF2(ypts,xpts)+xywts;
     end
 end
-%tic
-%IBIn2=IBin;
-%MxSpread = SpreadMex(xEpts,yEpts,IBin,IBwts,gw);
-%SpreadF = reshape(MxSpread,length(xEpts),length(yEpts))';
-%toc
-%max(max(abs(SpreadF2-SpreadF)))
-%max(max(abs(IBIn2-IBin)))
-%end
+% tic
+% IBIn2=IBin;
+% MxSpread = SpreadMex(xEpts,yEpts,IBin,IBwts,gw);
+% SpreadF = reshape(MxSpread,length(xEpts),length(yEpts))';
+% toc
+% max(max(abs(SpreadF2-SpreadF)))
+% max(max(abs(IBIn2-IBin)))
+% end
 

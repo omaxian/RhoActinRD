@@ -1,4 +1,4 @@
-function Statistics = RhoAndActin(Params,seed)
+function Statistics = RhoAndActin(Params,seed,doPlot)
     % Parameters:
     % koff0, rf, FullLifetime, GrShrnk, MaxLength, Nuc0 
     % in that order
@@ -22,7 +22,7 @@ function Statistics = RhoAndActin(Params,seed)
     dt = 0.25; % Stability limit is 1
     tf = 200;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [180];
+    tsaves = [160];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -163,44 +163,44 @@ function Statistics = RhoAndActin(Params,seed)
     end
     [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
         AllRho,AllActin,0);
-    Statistics.XCor=XCorsSim/max(XCorsSim(:));
+    Statistics.XCor=XCorsSim/max(abs(XCorsSim(:)));
     Statistics.rSim=rSim;
     Statistics.tSim=tSim;
     Statistics.ExSizes=ExSizes;
     Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
     if (0)
-        figure;
+        % figure;
         [~,nPlot]=size(PlotUs);
 %         tiledlayout(1,nPlot+2,'Padding', 'none', 'TileSpacing', 'compact');
-%         for iT=1:nPlot
-%             nexttile
-%             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
-%             title(strcat('$t=$',num2str(PlotTs(iT))))
-%             clim([min(PlotUs(:)) max(PlotUs(:))])
-%             %clim([0 3])
-%             set(gca,'YDir','Normal')
-%             colormap(turbo)
-%             hold on
-%             if (~isempty(Xf))
-%                 plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
-%             end
-%             if (iT==nPlot)
-%                 colorbar
-%             end
-%             if (iT==1)
-%                 ylabel('$y$')
-%             end
-%             xlabel('$x$')
-%         end
-%         nexttile
-        imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
-        clim([-1 1])
-        colorbar
-        xlabel('$\Delta r$')
-        ylabel('$\Delta t$')
-        title('Rho-actin Xcor')
-        xlim([0 5])
+        for iT=1:nPlot
+            nexttile
+            imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
+            title(strcat('$t=$',num2str(PlotTs(iT))))
+            clim([min(PlotUs(:)) max(PlotUs(:))])
+            %clim([0 3])
+            set(gca,'YDir','Normal')
+            colormap(turbo)
+            hold on
+            if (~isempty(Xf))
+                plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
+            end
+            if (iT==nPlot)
+                colorbar
+            end
+            if (iT==1)
+                ylabel('$y$')
+            end
+            xlabel('$x$')
+        end
+        % nexttile
+        % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
+        % clim([-1 1])
+        % colorbar
+        % xlabel('$\Delta r$')
+        % ylabel('$\Delta t$')
+        % title('Rho-actin Xcor')
+        % xlim([0 5])
     end
     if (0)
         figure;

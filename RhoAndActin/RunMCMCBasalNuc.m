@@ -1,11 +1,12 @@
 % Load the cross correlation function and excitation distribution
 addpath('Inputs/')
-EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn, star
+EmType = "nmy-pfn"; % nmy, nmy-cyk, nmy-pfn, star
 ActinOnly = 1;
-LoadExisting = 0;
+LoadExisting = 1;
 if (LoadExisting)
     if (ActinOnly)
-        load(strcat(EmType,'MCMCRunBN.mat'))
+        load(strcat(EmType,'MCMCRunBNEq.mat'))
+        nSamp=1250;
     else
         load(strcat(EmType,'MCMCRunBN_All.mat'))
     end
@@ -37,7 +38,8 @@ nParams = 8;
 PBounds = [0.4 1.22; 0.2 1.5; 0 30; 0 5; 0 5; 0 20; 0 0.5; 0 1.5];
 if (ActinOnly)
     nWalker = 40;
-    nParamsV=nParams-2;
+    warning('Effective params = 5')
+    nParamsV=nParams-3;
 else
     nWalker = 60;
     nParamsV = nParams;
@@ -161,7 +163,7 @@ for iSamp=SampStart:nSamp
     end
     if (mod(iSamp,5)==0)
         if (ActinOnly)
-            save(strcat(EmType,'MCMCRunBN.mat'))
+            save(strcat(EmType,'MCMCRunBNEq.mat'))
         else
             save(strcat(EmType,'MCMCRunBN_All.mat'))
         end

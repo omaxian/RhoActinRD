@@ -1,11 +1,12 @@
 % Cross correlation profiles in experimental data
-%tiledlayout(2,2,'Padding', 'none', 'TileSpacing', 'compact');
+Name='nmy-cyk';
 Widths = [50];
 Threses = [0.1];
+TimePlot=400;
 for iFw=1:length(Widths)
 %nexttile
 for iThr=1:length(Threses)
-%MovieNum=3;
+MovieNum=3;
 pxlSize = 0.1;
 Rho=double(load(strcat(Name,'Rho_',num2str(MovieNum),'.mat')).RhoData);
 Actin=double(load(strcat(Name,'Actin_',num2str(MovieNum),'.mat')).ActinData);
@@ -28,6 +29,14 @@ for iT=1:nFr
     Rho(:,:,iT)=Rho(:,:,iT)-mean(mean(Rho(:,:,iT)))+GlobalMeanRho;
     Actin(:,:,iT)=Actin(:,:,iT)-mean(mean(Actin(:,:,iT)))+GlobalMeanActin;
 end
+Nx=200;
+x=(0:Nx-1)*pxlSize;
+y=(0:Nx-1)*pxlSize;
+nexttile
+imagesc(x,y,Rho(:,:,TimePlot))
+xlabel('$x$ ($\mu$m)')
+ylabel('$y$ ($\mu$m)')
+colormap turbo
 % Filter data
 %nModes=10;
 %nModesTime=10;
@@ -35,14 +44,15 @@ end
 Filtx=smoothdata(Rho,1,'sgolay',Widths(iFw));
 Filtxy=smoothdata(Filtx,2,'sgolay',Widths(iFw));
 FiltRho=smoothdata(Filtxy,3,'sgolay',Widths(iFw));
-% % Identify pulsing regions
+nexttile
+imagesc(x,y,FiltRho(:,:,TimePlot))
+xlabel('$x$ ($\mu$m)')
+% Identify pulsing regions
 Thres=mean(FiltRho(:))+Threses(iThr)*(max(FiltRho(:))-mean(FiltRho(:)));
 Excited=FiltRho>Thres;
 % tsPl=[20 40 60];
 % FrPl=ceil(tsPl/FrTime)+1;
-% Nx=200;
-% x=(0:Nx-1)*pxlSize;
-% y=(0:Nx-1)*pxlSize;
+
 % figure;
 % tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
 % for iP=1:length(tsPl)
@@ -75,7 +85,9 @@ for iT=1:nFr
     NumExes(iT)=nEx;
     AvgExSize(iT)=mean(ExSize);
 end
-% Cross correlation
+nexttile
+imagesc(x,y,bwlabel(Excited(:,:,TimePlot)))
+xlabel('$x$ ($\mu$m)')% Cross correlation
 [UvalsF,dtvalsF,DistsByRF] = CrossCorrelations(pxlSize,pxlSize,FrTime,...
     FiltRho,FiltActin,1);
 DistsByRF=DistsByRF/max(DistsByRF(:));

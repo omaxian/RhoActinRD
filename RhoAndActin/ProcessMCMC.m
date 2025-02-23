@@ -1,19 +1,21 @@
-EmType='nmy-cyk';
-load(strcat(EmType,'MCMCRunL_NoWt.mat'))
+EmType='Starfish';
+load(strcat(EmType,'MCMCRunTwoEx_NoWt_All.mat'))
 nP=nParams;
+%tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
 % For MCMC
-figure
-nSoFar=iSamp;
-Accepted=Accepted(1:nSoFar,:);
+StartIndex=1;
+EndIndex=iSamp;
+nSoFar=EndIndex-StartIndex+1;
+Accepted=Accepted(StartIndex:EndIndex,:);
 Accepted=Accepted(:)';
-AllParametersES=AllParameters(:,1:nSoFar);
+AllParametersES=AllParameters(:,StartIndex:EndIndex);
 AllParameters=[];
 for p=1:nWalker
     AllParameters = [AllParameters AllParametersES((p-1)*nP+1:p*nP,:)];
 end
-AllExSizeErs = reshape(AllExSizeErs(1:nSoFar,:),nSoFar*nWalker,1);
-AllDiffNorms = reshape(AllDiffNorms(1:nSoFar,:),nSoFar*nWalker,1);
-Nnzs = reshape(Nnzs(1:nSoFar,:),nSoFar*nWalker,1);
+AllExSizeErs = reshape(AllExSizeErs(StartIndex:EndIndex,:),nSoFar*nWalker,1);
+AllDiffNorms = reshape(AllDiffNorms(StartIndex:EndIndex,:),nSoFar*nWalker,1);
+Nnzs = reshape(Nnzs(StartIndex:EndIndex,:),nSoFar*nWalker,1);
 AllMeanActins = reshape(AllMeanActins(1:nSoFar,:),nSoFar*nWalker,1);
 TotalLife = AllParameters(3,:) + 2*AllParameters(5,:)./AllParameters(4,:);
 TotalSpace = AllParameters(5,:).*AllParameters(6,:);
@@ -21,6 +23,7 @@ AllParameters(7,:)=TotalLife;
 AllParameters(8,:)=TotalSpace;
 
 LogLikelihood=AllDiffNorms+AllExSizeErs;
+%% 
 MaxDiff = max(AllDiffNorms);
 inds=1:length(AllDiffNorms);
 Ap2Inds=find(abs(AllDiffNorms-1)<1e-10);
@@ -31,9 +34,9 @@ Ap4Inds=inds(AllParameters(1,inds)<0.55);
 inds=setdiff(inds,Ap4Inds);
 % re-order indices
 [v,x]=sort(LogLikelihood,'descend');
-%inds=x(end-49:end);
 inds=x;
 inds(~Accepted(inds))=[];
+%inds=inds(end-100:end);
 %AllParameters(6,:)=TwoMeanActins;
 xIndex = [1 3 4 7];
 yIndex = [2 5 6 8];
@@ -43,10 +46,10 @@ yLabels = ["$k_\textrm{inh}$" "$\ell_\textrm{max}$" "$\bar q_0$" ...
     "$\bar{q}_0 \ell_\textrm{max}$"];
 xLimits = [0.4 1.22 0 30 0 5 0 30];
 yLimits = [0.2 1.1 0 20 0 1 0 8];
-tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-for iP=1:3
+tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
+for iP=2:3
 nexttile
-%subplot(1,3,iP-1)
+%subplot(1,3,iP)
 if (iP==1)
 plot([0.55 0.55],[0 3],':k')
 hold on
@@ -61,16 +64,18 @@ end
 %     10,LogLikelihood(Ap4Inds),'o','filled')
 scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
     20,LogLikelihood(inds),'s','filled')
+box on
 %scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
-%    's','filled')
-%hold on
+%    'd','filled')
+%box on
+hold on
 % if (iP==4)
 %     k=convhull(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds));
 %     set(gca,'ColorOrderIndex',get(gca,'ColorOrderIndex')-1)
 %     plot(AllParameters(xIndex(iP),inds(k)),AllParameters(yIndex(iP),inds(k)));
 % end
-hold on
-clim([min(LogLikelihood) 2])
+% hold on
+clim([min(LogLikelihood) 1])
 colormap(flipud(turbo))
 % box on
 xlabel(xLabels(iP))
@@ -81,22 +86,6 @@ ylim([yLimits(2*iP-1) yLimits(2*iP)])
 %     colorbar
 % end
 end
-% figure;
-% tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
-% nexttile
-% scatter(AllDifferencesModelExp(inds),TwoMeanActins(inds),'filled')
-% xlabel('XCor Error')
-% ylabel('Mean actin')
-% % nexttile
-% % scatter(AllDifferencesModelExp(inds),mean(AllNumEx(:,inds),'omitnan'),'filled')
-% % box on
-% % xlabel('XCor Error')
-% % ylabel('Mean \# excitations')
-% nexttile
-% scatter(AllDifferencesModelExp(inds),mean(AllExSizeErs(:,inds),'omitnan'),'filled')
-% xlabel('XCor Error')
-% box on
-% ylabel('Mean excitation size')
 % 
 % figure
 % for iWalker=1:nWalker
@@ -106,16 +95,16 @@ end
 % scatter(AllDifferencesModelExp(plInds),TwoMeanSize(plInds),36,Colors,'filled')
 % pause(1)
 % end
-
-
-figure
-for iWalker=5:5:nWalker
-inds=(iWalker-1)*nSoFar+1:iWalker*nSoFar;
-plInds=inds(Accepted(inds)==1);
-plot(mod(plInds-1,nSoFar),LogLikelihood(plInds),'-o')
-hold on
-end
-
+% 
+% 
+% figure
+% for iWalker=5:5:nWalker
+% inds=(iWalker-1)*nSoFar+1:iWalker*nSoFar;
+% plInds=inds(Accepted(inds)==1);
+% plot(mod(plInds-1,nSoFar),LogLikelihood(plInds),'-o')
+% hold on
+% end
+% 
 figure
 inds=1:nSoFar*nWalker;
 plInds=inds(Accepted(inds)==1);
@@ -125,15 +114,18 @@ Colors=mod(plInds,nSoFar);
 scatter(AllDiffNorms(plInds),...
     AllExSizeErs(plInds),20,Colors,'filled')
 
+CandInds=1:nSoFar*nWalker;
+CandInds=CandInds(Nnzs==numNonZero);
+[~,ind]=min(abs(LogLikelihood(CandInds)));
+ind=CandInds(ind);
 
-[~,ind]=min(LogLikelihood-1.4);
-
+ps=AllParameters(1:6,ind);
 ExSizesAll=[];
 nNz=0;
 TotActin=0;
 for seed=1:nSeed
     tic
-    Stats=RhoAndActin(AllParameters(:,ind),seed);
+    Stats=RhoAndActin(ps,seed,nNz==0);
     toc
     % Compute the norm relative to the experiment and the
     % difference in the excitation size (for C. elegans only)
@@ -153,6 +145,9 @@ for seed=1:nSeed
         TotActin=TotActin+Stats.MeanActin;
         tSimulated=Stats.tSim;
         rSimulated=Stats.rSim;
+        if (nNz==numNonZero)
+            break
+        end
     end
 end
 % Compute errors 
@@ -161,26 +156,32 @@ InterpolatedSim=ResampleXCor(XCorAvg,tSimulated,rSimulated,...
             Uvals,dtvals,max(Uvals)+1e-3,max(dtvals)+1e-3);
 XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
 XCorEr = sum(XCorEr(:))/ZeroEr
+if (~(EmType=='Starfish'))
 xp=histcounts(ExSizesAll,0:dsHist:400);
 WtsEx=ones(1,length(xp));
 xp=xp/(sum(xp)*dsHist);
 ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
         /sum(SizeHist.*SizeHist.*WtsEx) %L^2 norm
+else
+    ExSizeDiff=0;
+end
 MActin=TotActin/nNz
 
-figure
+nexttile
+imagesc(Uvals,dtvals,XCorsExp)
+clim([-1 1])
+colormap turbo
+ylim([-120 120])
+
+nexttile
 imagesc(Uvals,dtvals,InterpolatedSim)
 xlim([0 5])
 ylim([-120 120])
 clim([-1 1])
 colorbar
 colormap turbo
-figure
-imagesc(Uvals,dtvals,XCorsExp)
-clim([-1 1])
-colormap turbo
-ylim([-120 120])
-figure
+
+nexttile
 plot(dsHist/2:dsHist:400,xp)
 hold on
 plot(dsHist/2:dsHist:400,SizeHist)

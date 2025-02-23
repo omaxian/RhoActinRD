@@ -23,7 +23,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     dt = 0.25; % Stability limit is 1
     tf = 200;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [160];
+    tsaves = [40];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -58,7 +58,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
 
     if (MakeMovie)
         close all;
-        f=figure('Position',[100 100 600 600]);
+        f=figure('Position',[100 100 300 300]);
     end
     % Set up an initial actin grid
     [Xf,nPerFil,~] = SetUpActin(L,ds,[],PoreSize,nFilSt,MaxLength);
@@ -125,7 +125,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             hold on
             if (~isempty(Xf))
                 Xfpl=Xf-floor(Xf/L)*L;
-                plot(Xfpl(:,1),Xfpl(:,2),'ko','MarkerSize',0.125)
+                plot(Xfpl(:,1),Xfpl(:,2),'ko','MarkerSize',0.25,'LineWidth',1)
             end
             %colorbar
             %clim([0 StSt(end)])
@@ -135,17 +135,24 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             colormap(turbo)
             hold off
             pbaspect([1 1 1])
+            xlabel('$x$ ($\mu$m)')
+            ylabel('$y$ ($\mu$m)')
             movieframes(iT)=getframe(f);
         end
         if (mod(iT-1,saveEvery)==0)
             AllRho(:,:,(iT-1)/saveEvery+1)=u;
             AllActin(:,:,(iT-1)/saveEvery+1)=fg;
+            % Get x coordinates of all filaments in middle
+            Xfpl=Xf-floor(Xf/L)*L;
+            xCoords{(iT-1)/saveEvery+1}=...
+                Xfpl(Xfpl(:,2)>(Nx/2-1)*dx & Xfpl(:,2)<Nx/2*dx,1);
         end
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
-    AllActin=AllActin(:,:,41:end);
-    AllRho=AllRho(:,:,41:end);
+    BurnIn=40;
+    AllActin=AllActin(:,:,BurnIn+1:end);
+    AllRho=AllRho(:,:,BurnIn+1:end);
     if (size(StSt)>1)
         Thres=StSt(2);
     else
@@ -172,11 +179,11 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
     if (0)
-        % figure;
+        figure;
         [~,nPlot]=size(PlotUs);
-%         tiledlayout(1,nPlot+2,'Padding', 'none', 'TileSpacing', 'compact');
+        %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:nPlot
-            nexttile
+            %nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             title(strcat('$t=$',num2str(PlotTs(iT))))
             clim([min(PlotUs(:)) max(PlotUs(:))])
@@ -184,67 +191,27 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             set(gca,'YDir','Normal')
             colormap(turbo)
             hold on
+            pbaspect([1 1 1])
             if (~isempty(Xf))
-                plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.2)
+                plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.05)
             end
             if (iT==nPlot)
                 colorbar
             end
             if (iT==1)
-                ylabel('$y$')
+                ylabel('$y$ ($\mu$m)')
             end
-            xlabel('$x$')
+            xlabel('$x$ ($\mu$m)')
         end
-        % nexttile
-        % imagesc(rSim,tSim,XCorsSim/max(abs(XCorsSim(:))))
-        % clim([-1 1])
-        % colorbar
-        % xlabel('$\Delta r$')
-        % ylabel('$\Delta t$')
-        % title('Rho-actin Xcor')
-        % xlim([0 5])
-    end
-    if (0)
+        % Kymograph
         figure;
-        padxy=0;
-        tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-        % nexttile
-        % plot((dt:dt:tf),TotActin)
-        % xlabel('$t$ (s)')
-        % ylabel('Polymerized actin ($\mu$m)')
-        % title('Total actin')
-        nexttile
-        [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-            AllRho,AllRho,padxy);
-        imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
-        title('Rho')
-        ylim([-60 60])
-        xlim([0 10])
-        a=clim;
-        clim([-max(abs(a)) max(abs(a))]);
-        xlabel('$\Delta r$')
-        ylabel('$\Delta t$')
-        nexttile
-        [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-            AllRho,AllActin,padxy);
-        imagesc(Uvals,dtvals,DistsByR/max(abs(DistsByR(:))))
-        xlabel('$\Delta r$')
-        ylim([-60 60])
-        xlim([0 10])
-        title('Rho-Actin')
-        a=clim;
-        clim([-max(abs(a)) max(abs(a))]);
-        nexttile
-        [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dx,dt*saveEvery,...
-            AllActin,AllActin,padxy);
-        imagesc(Uvals,dtvals,DistsByR/max(DistsByR(:)))
-        xlabel('$\Delta r$')
-        title('Actin')
-        ylim([-60 60])
-        xlim([0 10])
-        a=clim;
-        clim([-max(abs(a)) max(abs(a))]);
+        RhoT=reshape(AllRho(Nx/2,:,:),Nx,tf-BurnIn)';
+        imagesc((0:Nx-1)*dx,0:tf-BurnIn-1,RhoT)
         colormap turbo
-        %close all;
+        hold on
+        for j=1:tf-BurnIn
+            xpl=xCoords{j};
+            plot(xpl,(j-1)*ones(length(xpl),1),'ko','MarkerSize',0.05)
+        end
     end
 end
