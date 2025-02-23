@@ -1,40 +1,42 @@
-function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,doPlot)
+function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
     %rng(seed);
     MakeMovie=0;
-    kbasal=Params(7);
-    kfb=Params(8);
-    KFB=Params(9);
     koff0=Params(1);
     rf = Params(2);
     Nuc0=Params(3);
     NucEn=Params(4);
     koffAct = Params(5);
+    Du = 0.1; % The size of the waves depends on Du
+    Dv = Params(6);
+    kbasal=Params(7);
+    kfb=Params(8);
+    KFB=Params(9);
+    L=20;
+    Nx=100; 
     % Solve for the steady states 
-    [rts,~,~] = PDERoots([Params(1:5);Params(7:9)]);
+    [rts,rtstab] = PDERoots(Params,Du,L,Nx);
     if (isscalar(rts(:,1)))
         ICRange = [0 2*rts(:,1); 0 2*rts(:,2)];
-    elseif (length(rts(:,1))==3)
+    else 
         ICRange = [min(rts(:,1)) max(rts(:,1)); ...
             min(rts(:,2)) max(rts(:,2))];
     end
     
     %dt = 0.1; % Stability limit is 1
     tf = 200;
-    Du = 0.1; % The size of the waves depends on Du
-    Dv = Params(6);
     tsaves = [160];
     saveEvery=floor(1e-6+1/dt);
     
     % Initialize grid
-    L=20;
-    Nx=100; % The grid spacing 
     dx=L/Nx;
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
-    [xg,yg]=meshgrid(x,y);
+    %[xg,yg]=meshgrid(x,y);
     % Set up a wave initial condition
-    %u = ICRange(1,1)+0.5*(1+sin(2*pi*xg/L).*sin(2*pi*yg/L))*(ICRange(1,2)-ICRange(1,1));
-    %v = ICRange(2,1)+0.5*(1+sin(2*pi*xg/L).*sin(2*pi*yg/L))*(ICRange(2,2)-ICRange(2,1));
+    %u = ICRange(1,1)+0.5*(1+sin(2*pi*xg/L).*...
+    % sin(2*pi*yg/L))*(ICRange(1,2)-ICRange(1,1));
+    %v = ICRange(2,1)+0.5*(1+sin(2*pi*xg/L).*...
+    % sin(2*pi*yg/L))*(ICRange(2,2)-ICRange(2,1));
     u = ICRange(1,1)+rand(Nx)*(ICRange(1,2)-ICRange(1,1));
     v = ICRange(2,1)+rand(Nx)*(ICRange(2,2)-ICRange(2,1)); 
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
@@ -58,14 +60,17 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,doPlot)
     PlotTs=0*tsaves;
     st=1;
     for iT=1:nSt
-        % Break out of sims not doing anything
-        if (range(u(:)) <1e-2 && range(v(:)) < 1e-2)
-            Statistics.XCor=0;
-	        Statistics.MeanActin=0;
-            return;
+        % Break out of sims not doing anything (sitting at stable roots)
+        for j=1:size(rts,1)
+            if (max(abs(u(:)-rts(j,1)))<1e-2 && rtstab(j))
+                Statistics.XCor=0;
+	            Statistics.MeanActin=0;
+                return;
+            end
         end
+        % end
         RHS_u = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*v).*u;
-        RHS_v = (Nuc0+NucEn*u) - koffAct*v;
+        RHS_v = (Nuc0+NucEn*u.^2) - koffAct*v;
         RHSHat_u = fft2(u/dt+RHS_u);
         uHatNew = RHSHat_u./DivFacFourier_u;
         uNew = ifft2(uHatNew);
@@ -116,31 +121,35 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,doPlot)
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
-    AllActin=AllActin(:,:,41:end);
-    AllRho=AllRho(:,:,41:end);
-    if (size(rts(:,1))>1)
-        Thres=rts(1,2);
-    else
-        Thres=mean(AllRho(:));
-    end
-    RhoThres=AllRho>Thres;
-    [~,~,nFr]=size(RhoThres);
-    NumExcitations=zeros(nFr,1);
-    ExSizes=[];
-    for iT=1:nFr
-        CC = bwconncomp(RhoThres(:,:,iT));
-        L2=CC2periodic(CC,[1 1],'L');
-        NumExcitations(iT)=max(L2(:));
-        for iJ=1:max(L2(:))
-            ExSizes=[ExSizes;sum(L2(:)==iJ)/(Nx^2)*L^2];
+    if (postproc)
+        AllActin=AllActin(:,:,41:end);
+        AllRho=AllRho(:,:,41:end);
+        if (size(rts(:,1))>1)
+            Thres=rts(1,2);
+        else
+            Thres=mean(AllRho(:));
         end
+        RhoThres=AllRho>Thres;
+        [~,~,nFr]=size(RhoThres);
+        NumExcitations=zeros(nFr,1);
+        ExSizes=[];
+        for iT=1:nFr
+            CC = bwconncomp(RhoThres(:,:,iT));
+            L2=CC2periodic(CC,[1 1],'L');
+            NumExcitations(iT)=max(L2(:));
+            for iJ=1:max(L2(:))
+                ExSizes=[ExSizes;sum(L2(:)==iJ)/(Nx^2)*L^2];
+            end
+        end
+        [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
+            AllRho,AllActin,0);
+        Statistics.XCor=XCorsSim/max(abs(XCorsSim(:)));
+        Statistics.rSim=rSim;
+        Statistics.tSim=tSim;
+        Statistics.ExSizes=ExSizes;
+        Statistics.NumExcitations=NumExcitations;
+        Statistics.MeanActin=mean(AllActin(:));
+    else
+        Statistics=[];
     end
-    [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
-        AllRho,AllActin,0);
-    Statistics.XCor=XCorsSim/max(abs(XCorsSim(:)));
-    Statistics.rSim=rSim;
-    Statistics.tSim=tSim;
-    Statistics.ExSizes=ExSizes;
-    Statistics.NumExcitations=NumExcitations;
-    Statistics.MeanActin=mean(AllActin(:));
 end
