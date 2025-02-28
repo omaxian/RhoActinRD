@@ -24,7 +24,7 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
     
     %dt = 0.1; % Stability limit is 1
     tf = 200;
-    tsaves = [160];
+    tsaves = [40];
     saveEvery=floor(1e-6+1/dt);
     
     % Initialize grid

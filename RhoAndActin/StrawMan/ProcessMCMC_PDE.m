@@ -1,5 +1,5 @@
-EmType='Starfish';
-load(strcat(EmType,'MCMCRunPDE_SharpBox.mat'))
+EmType='nmy';
+load(strcat(EmType,'MCMCRunPDE_SharpBox2.mat'))
 nP=nParams;
 %tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
 % For MCMC
@@ -48,19 +48,14 @@ inds=1:length(AllDiffNorms);
 % Ap4Inds=Ap4Inds(inds4);
 % re-order indices
 [v,x]=sort(LogLikelihood(inds),'descend');
+%inds=x(end-1000:end);
 inds=inds(x);
-% pChk=AllParameters(6,:)';
-% inds(~Accepted(inds))=[];
-% pChk(~Accepted(inds))=[];
-% inds(pChk(inds)>0.1)=[];
-% inds=inds(end-1000:end);
-%AllParameters(6,:)=TwoMeanActins;
 xIndex = [1 3 5];
 yIndex = [2 4 6];
-xLabels = ["$k_\textrm{off}^{(0)}$" "$\bar q_0$" ...
-    "$k_\textrm{off}^{(act)}$"];
-yLabels = ["$k_\textrm{inh}$" "$\bar{q}_{\rho}$" ...
-    "$D^\textrm{(act)}$"];
+xLabels = ["$k_\textrm{off}^{(0)}$" "$q_b$" ...
+    "$k_\textrm{off}^\textrm{(act)}$"];
+yLabels = ["$k_\textrm{inh}$" "$q_\rho$" ...
+    "$D_a$"];
 xLimits = [PBounds(xIndex(1),:) PBounds(xIndex(2),:) ...
     PBounds(xIndex(3),:) ];
 yLimits = [PBounds(yIndex(1),:) PBounds(yIndex(2),:) ...
@@ -89,7 +84,8 @@ hold on
 %     plot(AllParameters(xIndex(iP),inds(k)),AllParameters(yIndex(iP),inds(k)));
 % end
 % hold on
-clim([min(LogLikelihood) 2])
+clim([min(LogLikelihood) 1.2])
+%clim([0.8 1.5])
 colormap(flipud(turbo))
 % box on
 xlabel(xLabels(iP))
@@ -129,18 +125,21 @@ scatter(AllDiffNorms(plInds),...
     AllExSizeErs(plInds),20,Colors,'filled')
 
 CandInds=1:nSoFar*nWalker;
-CandInds=CandInds(Nnzs==numNonZero  & AllParameters(6,:)'<0.1);
-[~,ind]=min(abs(LogLikelihood(CandInds)));
-ind=CandInds(ind);
-
-ps=AllParameters(:,ind);
+CandInds=CandInds(AllExSizeErs < 0.75 & AllDiffNorms<0.75);
+[vals,srtinds]=sort(LogLikelihood(CandInds));
+CandInds=CandInds(srtinds);
+% Recompute a more accurate cross correlation
+nToCheck=length(vals);
+nSeedMax=100;
+nNzMax=5;
+RecomputedLikelihood=zeros(nToCheck,1);
+for jInd=1:nToCheck
+ps=AllParameters(:,CandInds(jInd));
 ExSizesAll=[];
 nNz=0;
 TotActin=0;
-for seed=1:nSeed
-    tic
+for seed=1:nSeedMax
     Stats=RhoAndActinPDEs(ps,dt,[],1);
-    toc
     % Compute the norm relative to the experiment and the
     % difference in the excitation size (for C. elegans only)
     if (Stats.XCor(1)==0)
@@ -159,7 +158,7 @@ for seed=1:nSeed
         TotActin=TotActin+Stats.MeanActin;
         tSimulated=Stats.tSim;
         rSimulated=Stats.rSim;
-        if (nNz==numNonZero)
+        if (nNz==nNzMax)
             break
         end
     end
@@ -179,23 +178,27 @@ ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
 else
     ExSizeDiff=0;
 end
+RecomputedLikelihood(jInd)=XCorEr+ExSizeDiff;
+RecomputedXCors(:,:,jInd)=XCorAvg;
+RecomputedXP(:,jInd)=xp;
 MActin=TotActin/nNz
+end
 
-figure
-tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
-nexttile
-imagesc(Uvals,dtvals,XCorsExp)
-clim([-1 1])
-colormap turbo
-ylim([-120 120])
-
-nexttile
-imagesc(Uvals,dtvals,InterpolatedSim)
-xlim([0 5])
-ylim([-120 120])
-clim([-1 1])
-colorbar
-colormap turbo
+% figure
+% tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
+% nexttile
+% imagesc(Uvals,dtvals,XCorsExp)
+% clim([-1 1])
+% colormap turbo
+% ylim([-120 120])
+% 
+% nexttile
+% imagesc(Uvals,dtvals,InterpolatedSim)
+% xlim([0 5])
+% ylim([-120 120])
+% clim([-1 1])
+% colorbar
+% colormap turbo
 
 % nexttile
 % plot(dsHist/2:dsHist:400,xp)

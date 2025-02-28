@@ -1,10 +1,10 @@
 % Load the cross correlation function and excitation distribution
 addpath("../Inputs")
 EmType = "Starfish"; % nmy, nmy-cyk, nmy-pfn, star
-LoadExisting = 1;
+LoadExisting = 0;
 rng(1);
 if (LoadExisting)
-    load(strcat(EmType,'MCMCRunPDE_SharpBox.mat'))
+    load(strcat(EmType,'MCMCRunPDE_SharpBoxAll.mat'))
     SampStart=iSamp+1;
 else
 if (EmType=="Starfish")
@@ -18,7 +18,7 @@ end
 TotWts=ones(length(dtvals),length(Uvals));
 XCorNorm=TotWts.*XCorsExp.^2;
 ZeroEr = round(sum(XCorNorm(:)),1);
-nSamp = 1000;
+nSamp = 2000;
 numNonZero = 2; % averages per parameter set
 nSeed = 10; % maximum # of attempts to get to 2
 nParams = 9;
@@ -157,7 +157,7 @@ for iSamp=SampStart:nSamp
         end
     end
     if (mod(iSamp,5)==0)
-        save(strcat(EmType,'MCMCRunPDE_SharpBoxD.mat'))
+        save(strcat(EmType,'MCMCRunPDE_SharpBoxAll.mat'))
     end
 end
 
@@ -173,15 +173,15 @@ function a = inRange(Params,Range)
     x1 = Params > Range(:,1) & Params < Range(:,2);
     a = sum(x1)==length(Params);
     % Check the stability (don't accept anything with one unif state)
-    if (a==1)
-        [rts,stability] = PDERoots(Params,0.1,20,100);
-        %OneUnst = isscalar(rts(:,1)) && stability(1)==-1;
-        %TwoUnst = sum(stability==-1)>1;
-        OneSt = isscalar(rts(:,1)) && stability==1;
-        if (OneSt)
-            a=0;
-        end
-    end
+    % if (a==1)
+    %     [rts,stability] = PDERoots(Params,0.1,20,100);
+    %     %OneUnst = isscalar(rts(:,1)) && stability(1)==-1;
+    %     %TwoUnst = sum(stability==-1)>1;
+    %     OneSt = isscalar(rts(:,1)) && stability==1;
+    %     if (OneSt)
+    %         a=0;
+    %     end
+    % end
 end
 
 function ell = Likelihood(Ebar,ExSizeEr)
