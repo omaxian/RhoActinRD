@@ -1,12 +1,12 @@
 % Cross correlation profiles in experimental data
-Name='nmy-cyk';
+Name='nmy-pfn';
 Widths = [50];
 Threses = [0.1];
 TimePlot=400;
 for iFw=1:length(Widths)
 %nexttile
 for iThr=1:length(Threses)
-MovieNum=3;
+MovieNum=2;
 pxlSize = 0.1;
 Rho=double(load(strcat(Name,'Rho_',num2str(MovieNum),'.mat')).RhoData);
 Actin=double(load(strcat(Name,'Actin_',num2str(MovieNum),'.mat')).ActinData);

@@ -19,6 +19,7 @@ function [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dy,dt,Adata,Bdata,padxy)
     az(1:Ny,1:Nx,1:Nt)=Adata;
     bz(1:Ny,1:Nx,1:Nt)=Bdata;
     c3=circshift(ifftn(fftn(bz).*conj(fftn(az))),shft);
+    c3_2D=reshape(c3,size(c3,1)*size(c3,2),size(c3,3));
     
     [xg,yg]=meshgrid(dxvals,dyvals);
     rg=sqrt(xg(:,:,1).^2+yg(:,:,1).^2);
@@ -27,12 +28,20 @@ function [Uvals,dtvals,DistsByR] = CrossCorrelations(dx,dy,dt,Adata,Bdata,padxy)
     % The map is SortedInds -> ic
     nu=length(Uvals);
     DistsByR = zeros(length(dtvals),nu);
+    if (Nx==100 & dx==0.2)
+        load 'CrossCorrMapFromXYToR.mat' Inds
+        for iP=1:nu
+            DistsByR(:,iP)=mean(c3_2D(Inds{iP},:),1);
+        end
+    else
+    warning('Should not be here!')
     for iT=1:length(dtvals)
         ThisImg = c3(:,:,iT);
         for iP=1:nu
             DistsByR(iT,iP)=mean(ThisImg(SortedInds(ic==iP)));
         end
-    end   
+    end 
+    end
 end
 
 

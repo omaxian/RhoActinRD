@@ -119,7 +119,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             PlotXfs{index}=Xf-floor(Xf/L)*L;
             PlotTs(index)=iT*dt;
         end
-        if (mod(iT-1,10)==0 && MakeMovie)
+        if (mod(iT-1,4)==0 && MakeMovie)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
             hold on
@@ -179,10 +179,10 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
     if (0)
-        figure;
+        nexttile
         [~,nPlot]=size(PlotUs);
         %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
-        for iT=1:nPlot
+        for iT=1:0
             %nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             title(strcat('$t=$',num2str(PlotTs(iT))))
@@ -195,23 +195,25 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             if (~isempty(Xf))
                 plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.05)
             end
-            if (iT==nPlot)
-                colorbar
-            end
-            if (iT==1)
-                ylabel('$y$ ($\mu$m)')
-            end
+            % if (iT==nPlot)
+            %     colorbar
+            % end
+            % if (iT==1)
+            %     ylabel('$y$ ($\mu$m)')
+            % end
             xlabel('$x$ ($\mu$m)')
         end
         % Kymograph
-        figure;
-        RhoT=reshape(AllRho(Nx/2,:,:),Nx,tf-BurnIn)';
+        % figure;
+        RhoT=reshape(AllRho(Nx/4,:,:),Nx,tf-BurnIn)';
         imagesc((0:Nx-1)*dx,0:tf-BurnIn-1,RhoT)
         colormap turbo
         hold on
         for j=1:tf-BurnIn
             xpl=xCoords{j};
-            plot(xpl,(j-1)*ones(length(xpl),1),'ko','MarkerSize',0.05)
+            plot(xpl,(j-1)*ones(length(xpl),1),'ko','MarkerSize',0.01)
         end
+        xlabel('$x$ ($\mu$m)')
+        pbaspect([1 1.5 1])
     end
 end

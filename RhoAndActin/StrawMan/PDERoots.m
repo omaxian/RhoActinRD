@@ -1,4 +1,4 @@
-function [rts,stability] = PDERoots(Params,Du,L,Nx)
+function [rts,stability,minM,minN] = PDERoots(Params,Du,L,Nx)
     koff0=Params(1);
     rf = Params(2);
     Nuc0=Params(3);
@@ -30,26 +30,33 @@ function [rts,stability] = PDERoots(Params,Du,L,Nx)
     J11 = 3*kfb*KFB*urts.^2./(KFB+urts.^3).^2 - (koff0+rf*vrts);
     J12 = -rf*urts;
     J21 = 2*NucEn*urts;
-    J22 = -koffAct;
+    J22 = -koffAct*ones(length(urts),1);
+    minM=0;
+    minN=0;
+    maxEig=-inf;
+    detJs = J11.*J22-J21.*J12;
+    trJs = J11+J22;
+    %Stable = detJs > 0 & trJs < 0;
+    Unstable = detJs < 0 | (detJs > 0 & trJs > 0);
+    %spiral = 4*detJs - trJs.^2 > 0;
+    stability(Unstable)=-1;
     if (Du > 0 || Dv > 0)
-        for m=0:Nx
-            ksq = 8*pi^2*m^2/L^2;
-            J11D = J11 - ksq*Du;
-            J22D = J22 - ksq*Dv;
-            detJs = J11D.*J22D-J21.*J12;
-            trJs = J11D+J22D;
-            %Stablem = detJs > 0 & trJs < 0;
-            Unstablem = detJs < 0 | (detJs > 0 & trJs > 0);
-            %spiralm = 4*detJs - trJs.^2 > 0;
-            stability(Unstablem)=-1;
+        for m=1:Nx-1
+            for n=1:Nx-1
+                kxsq = 4*pi^2*m^2/L^2;
+                kysq = 4*pi^2*n^2/L^2;
+                J11D = J11 - (kxsq+kysq)*Du;
+                J22D = J22 - (kxsq+kysq)*Dv;
+                for iP=1:length(J11D)
+                maxEigMN = max(real(eig([J11D(iP) J12(iP); J21(iP) J22D(iP)])));
+                if (m+n>0 && maxEigMN > maxEig)
+                    maxEig=maxEigMN;
+                    minM=m;
+                    minN=n;
+                end
+                end
+            end
         end
-    else
-        detJs = J11.*J22-J21.*J12;
-        trJs = J11+J22;
-        %Stable = detJs > 0 & trJs < 0;
-        Unstable = detJs < 0 | (detJs > 0 & trJs > 0);
-        %spiral = 4*detJs - trJs.^2 > 0;
-        stability(Unstable)=-1;
     end
 end
 

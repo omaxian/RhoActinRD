@@ -1,5 +1,4 @@
-function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
-    %rng(seed);
+function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
     MakeMovie=0;
     koff0=Params(1);
     rf = Params(2);
@@ -14,9 +13,9 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
     L=20;
     Nx=100; 
     % Solve for the steady states 
-    [rts,rtstab] = PDERoots(Params,Du,L,Nx);
+    [rts,rtstab,mmg,nmg] = PDERoots(Params,Du,L,Nx);
     if (isscalar(rts(:,1)))
-        ICRange = [0 2*rts(:,1); 0 2*rts(:,2)];
+        ICRange = [0 2*rts(:,1); 0*rts(:,2) 2*rts(:,2)];
     else 
         ICRange = [min(rts(:,1)) max(rts(:,1)); ...
             min(rts(:,2)) max(rts(:,2))];
@@ -31,14 +30,12 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
     dx=L/Nx;
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
-    %[xg,yg]=meshgrid(x,y);
+    [xg,yg]=meshgrid(x,y);
     % Set up a wave initial condition
-    %u = ICRange(1,1)+0.5*(1+sin(2*pi*xg/L).*...
-    % sin(2*pi*yg/L))*(ICRange(1,2)-ICRange(1,1));
-    %v = ICRange(2,1)+0.5*(1+sin(2*pi*xg/L).*...
-    % sin(2*pi*yg/L))*(ICRange(2,2)-ICRange(2,1));
-    u = ICRange(1,1)+rand(Nx)*(ICRange(1,2)-ICRange(1,1));
-    v = ICRange(2,1)+rand(Nx)*(ICRange(2,2)-ICRange(2,1)); 
+    u = ICRange(1,1)+0.5*(1+sin(mmg*2*pi*xg/L).*sin(nmg*2*pi*yg/L))...
+        *(ICRange(1,2)-ICRange(1,1));
+    v = ICRange(2,1)+0.5*(1+sin(mmg*2*pi*xg/L).*sin(nmg*2*pi*yg/L))...
+        *(ICRange(2,2)-ICRange(2,1)); 
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
     ksq=kx.^2+ky.^2;
@@ -60,17 +57,8 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
     PlotTs=0*tsaves;
     st=1;
     for iT=1:nSt
-        % Break out of sims not doing anything (sitting at stable roots)
-        for j=1:size(rts,1)
-            if (max(abs(u(:)-rts(j,1)))<1e-2 && rtstab(j))
-                Statistics.XCor=0;
-	            Statistics.MeanActin=0;
-                return;
-            end
-        end
-        % end
         RHS_u = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*v).*u;
-        RHS_v = (Nuc0+NucEn*u.^2) - koffAct*v;
+        RHS_v = (Nuc0+NucEn.*u.^2) - koffAct*v;
         RHSHat_u = fft2(u/dt+RHS_u);
         uHatNew = RHSHat_u./DivFacFourier_u;
         uNew = ifft2(uHatNew);
@@ -78,7 +66,9 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
         vHatNew = RHSHat_v./DivFacFourier_v;
         vNew = ifft2(vHatNew);
         u = uNew;
+        u(u<0)=0;
         v = vNew;
+        v(v<0)=0;
         if (max(abs(u(:)) > 1e5))
             st=0;
             warning('Rejecting because of unstable simulation')
@@ -98,10 +88,10 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,seed,postproc)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
             %colorbar
-            %clim([0 StSt(end)])
+            clim(ICRange(1,:))
             %colormap("turbo")
             title(sprintf('$t= %1.1f$',iT*dt))
-            clim(ICRange(1,:))
+            %clim(ICRange(1,:))
             colormap(turbo)
             colorbar
             pbaspect([1 1 1])

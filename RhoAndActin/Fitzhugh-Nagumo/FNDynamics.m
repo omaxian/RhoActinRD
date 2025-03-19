@@ -7,7 +7,7 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
     tau = Params(4);
     Du = 0.1; % The size of the waves depends on Du
     Dv = Params(5);
-    tf = 600;
+    tf = 250;
     unstable = 0;
     
     % Numerical params
@@ -39,6 +39,14 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
     end
     u = RtStart(1)+(RtEnd(1)-RtStart(1)).*rand(Nx);
     v = RtStart(2)+(RtEnd(2)-RtStart(2)).*rand(Nx);
+    dx=L/Nx;
+    x=(0:Nx-1)*dx;
+    y=(0:Nx-1)*dx;
+    [xg,yg]=meshgrid(x,y);
+    u = RtStart(1)+0.5*(1+sin(2*pi*xg/L).*...
+    sin(2*pi*yg/L))*(RtEnd(1)-RtStart(1));
+    v = RtStart(2)+0.5*(1+sin(2*pi*xg/L).*...
+    sin(2*pi*yg/L))*(RtEnd(2)-RtStart(2));
     
     if (MakeMovie)
         f=figure('Position',[100 100 600 300]);
@@ -126,8 +134,8 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
-    AllActin=AllActin(:,:,401:end);
-    AllRho=AllRho(:,:,401:end);
+    AllActin=AllActin(:,:,51:end);
+    AllRho=AllRho(:,:,51:end);
     Thres=mean(AllRho(:));
     if (length(rts(:,1))>1)
         % Take the middle root

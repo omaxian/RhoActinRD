@@ -6,7 +6,7 @@ LoadExisting = 1;
 if (LoadExisting)
     if (ActinOnly)
         load(strcat(EmType,'MCMCRunBNEq.mat'))
-        nSamp=1250;
+        nSamp=2500;
     else
         load(strcat(EmType,'MCMCRunBN_All.mat'))
     end
