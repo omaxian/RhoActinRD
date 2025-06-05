@@ -1,6 +1,7 @@
-EmType='nmy';
+EmType='Starfish';
 load(strcat(EmType,'MCMCRunPDE_Det.mat'))
 nP=nParams;
+Randomness=0;
 %tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
 % For MCMC
 StartIndex=1;
@@ -20,6 +21,18 @@ AllExSizeErs = reshape(AllExSizeErs(StartIndex:EndIndex,:),nSoFar*nWalker,1);
 AllDiffNorms = reshape(AllDiffNorms(StartIndex:EndIndex,:),nSoFar*nWalker,1);
 AllMeanActins = reshape(AllMeanActins(1:nSoFar,:),nSoFar*nWalker,1);
 LogLikelihood=AllDiffNorms+AllExSizeErs;
+
+nTot=nSoFar*nWalker;
+AllnRts = zeros(nTot,1);
+AllnSt = zeros(nTot,1);
+for iP=1:nTot
+    p=AllParameters(:,iP);
+    p(6)=0;
+    [rts,stability,~,~] = PDERoots(p,0,20,100);
+    AllnRts(iP) = length(rts(:,1));
+    AllnSt(iP) = sum(stability==1);
+end
+
  
 inds=1:length(AllDiffNorms);
 % Ap2Inds = find(AllParameters(6,:)>0.1);
@@ -40,8 +53,8 @@ xLimits = [PBounds(xIndex(1),:) PBounds(xIndex(2),:) ...
     PBounds(xIndex(3),:) PBounds(xIndex(4),:)];
 yLimits = [PBounds(yIndex(1),:) PBounds(yIndex(2),:) ...
     PBounds(yIndex(3),:) PBounds(yIndex(4),:)];
-tiledlayout(1,4,'Padding', 'none', 'TileSpacing', 'compact');
-for iP=1:4
+tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+for iP=1:3
 nexttile
 % scatter(AllParameters(xIndex(iP),Ap2Inds),AllParameters(yIndex(iP),Ap2Inds),...
 %      10,LogLikelihood(Ap2Inds),'>','filled')
@@ -57,7 +70,6 @@ ylabel(yLabels(iP))
 xlim([xLimits(2*iP-1) xLimits(2*iP)])
 ylim([yLimits(2*iP-1) yLimits(2*iP)])
 end
-%return
 % 
 % 
 figure
@@ -80,7 +92,9 @@ scatter(AllDiffNorms(plInds),...
 CandInds=1:nSoFar*nWalker;
 [vals,srtinds]=sort(LogLikelihood(CandInds));
 CandInds=CandInds(srtinds);
+NumRts = [AllnRts(CandInds) AllnSt(CandInds)];
 %RecomputedLikelihood=zeros(nToCheck,1);
+nSeed=1;
 for jInd=1
 ps=AllParameters(:,CandInds(jInd));
 ExSizesAll=[];
@@ -91,6 +105,10 @@ for seed=1:nSeed
             (ps,dt,seed,1,Nuc0s,NucEns);
     else
         [Stats,st]=RhoAndActinPDEs(ps,dt,1);
+        %load('PartitionRegions.mat')
+        %[Stats,st]=RhoAndActinPDEs_RandomNuc...
+        %    ([ps(1:6);1;ps(7:9)],dt/2,seed,1,Nuc0s,NucEns);
+        %RhoAndActinTauPDEs;
     end
     % Compute the norm relative to the experiment and the
     % difference in the excitation size (for C. elegans only)
@@ -128,24 +146,3 @@ else
 end
 MActin=TotActin/nSeed;
 end
-
-figure
-tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
-nexttile
-imagesc(Uvals,dtvals,XCorsExp)
-clim([-1 1])
-colormap turbo
-ylim([-120 120])
-
-nexttile
-imagesc(Uvals,dtvals,InterpolatedSim)
-xlim([0 5])
-ylim([-120 120])
-clim([-1 1])
-colorbar
-colormap turbo
-
-% nexttile
-% plot(dsHist/2:dsHist:400,xp)
-% hold on
-% plot(dsHist/2:dsHist:400,SizeHist)

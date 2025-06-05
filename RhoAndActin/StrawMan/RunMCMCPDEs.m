@@ -1,7 +1,7 @@
 % Load the cross correlation function and excitation distribution
 addpath("../Inputs")
-EmType = "nmy"; % nmy, nmy-cyk, nmy-pfn, star
-LoadExisting = 0;
+EmType = "Starfish"; % nmy, nmy-cyk, nmy-pfn, star
+LoadExisting = 1;
 Randomness = 0;
 if (LoadExisting)
     if (Randomness)
@@ -10,7 +10,7 @@ if (LoadExisting)
         load(strcat(EmType,'MCMCRunPDE_Det.mat'))
     end
     SampStart=iSamp+1;
-    nSamp=1000;
+    nSamp=2000;
 else
 if (EmType=="Starfish")
     %load('SortedParametersOnlyActin.mat') % Params

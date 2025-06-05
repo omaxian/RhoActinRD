@@ -1,11 +1,11 @@
-Names=["Starfish" "nmy" "nmy-pfn" "nmy-cyk"];
-Symbols = ["o" "s" ">" "d"];
-for jName=1:4
+Names=["nmy"];
+Symbols = ["o" "^" ">" "d"];
+for jName=1
 EmType=Names(jName);
 load(strcat(EmType,'MCMCRunBNEq.mat'))
 nP=nParams;
 % For MCMC
-StartIndex=nSamp/2+1;
+StartIndex=1;
 EndIndex=nSamp;
 nSoFar=EndIndex-StartIndex+1;
 Accepted=Accepted(StartIndex:EndIndex,:);
@@ -19,9 +19,6 @@ AllExSizeErs = reshape(AllExSizeErs(StartIndex:EndIndex,:),nSoFar*nWalker,1);
 AllDiffNorms = reshape(AllDiffNorms(StartIndex:EndIndex,:),nSoFar*nWalker,1);
 Nnzs = reshape(Nnzs(StartIndex:EndIndex,:),nSoFar*nWalker,1);
 AllMeanActins = reshape(AllMeanActins(1:nSoFar,:),nSoFar*nWalker,1);
-%AllParameters(9,:)=AllParameters(3,:)+AllParameters(6,:)./AllParameters(4,:)+...
-%    AllParameters(6,:)./AllParameters(5,:);
-%AllParameters(10,:)=AllMeanActins;
 
 LogLikelihood=AllDiffNorms+AllExSizeErs;
 MaxDiff = max(AllDiffNorms);
@@ -30,7 +27,8 @@ MaxDiff = max(AllDiffNorms);
 inds=x;
 %inds(~Accepted(inds))=[];
 inds=inds(end-99:end);
-PL1=AllParameters(7,inds)<0.03;
+PL1=AllParameters(8,inds)<0.75;
+if (1)
 % AllParameters(3,:)=AllParameters(3,:)+...
 %     2*AllParameters(6,:)./AllParameters(4,:);
 TotalLifetime = AllParameters(6,:)./AllParameters(4,:)+...
@@ -39,36 +37,11 @@ NFilBulk = AllParameters(7,:).*TotalLifetime;
 MeanBulk = NFilBulk.*AllParameters(6,:);
 NFilRho = AllParameters(8,:).*TotalLifetime;
 MeanRho = NFilRho.*AllParameters(6,:);
-ChaseSpeed = AllParameters(8,:).*AllParameters(6,:);
-% Estimate mesh size 
-load('MeshSizeEstimateData.mat')
-Ls=AllParameters(6,:);
-MeshFactor=0*Ls;
-for j=1:length(Ls)
-    Lfil=Ls(j);
-    if (Lfil < Lens(1))
-        MeshFactor(j)=fLens(1);
-    elseif (Lfil>Lens(end))
-        MeshFactor(j)=fLens(end);
-    else
-    [~,ind1]=min(abs(Lens-Lfil));
-    L1 = Lens(ind1);
-    if (L1 < Lfil)
-        ind2 =ind1+1;
-    else
-        ind2=ind1-1;
-    end
-    % Linear interpolation
-    MeshFactor(j) = fLens(ind1)+(fLens(ind2)-fLens(ind1))./...
-        (Lens(ind2)-Lens(ind1)).*(Lfil-Lens(ind1));
-    end
-end
-
-L=20;
-Hetero = MeshFactor.*L^2./(MeanBulk+MeanRho);
+ChaseSpeed = NFilRho.*AllParameters(6,:);
+AngleFree = 2*pi./NFilRho;
 AllParameters(9,:)=MeanBulk;
-AllParameters(10,:)=MeanRho;
-AllParameters(11,:)=Hetero;
+AllParameters(10,:)=ChaseSpeed;
+AllParameters(11,:)=AngleFree;
 xIndex = [1 3 4 7 9];
 yIndex = [2 6 6 8 10];
 xLabels = ["$k_\textrm{off}^{(0)}$" "$T_\textrm{fil}$" "$\nu_\textrm{p}$" ...
@@ -78,23 +51,26 @@ yLabels = ["$k_\textrm{inh}$" "$\ell_\textrm{max}$" "$\ell_\textrm{max}$" ...
 xLimits = [0.25 1.22 0 30 0 5 0 0.5 0 2.5];
 yLimits = [0.2 1.5 0 20 0 20 0 1.5 0 7.5];
 %tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-if (jName <4)
+figure(1)
+if (jName==2 || jName ==3)
 scatter3(AllParameters(9,inds),AllParameters(10,inds),...
     AllParameters(11,inds),Symbols(jName),'filled')
 hold on
 else
 scatter3(AllParameters(9,inds(~PL1)),AllParameters(10,inds(~PL1)),...
     AllParameters(11,inds(~PL1)),Symbols(jName),'filled')
+hold on
 set(gca,'ColorOrderIndex',jName)
 scatter3(AllParameters(9,inds(PL1)),AllParameters(10,inds(PL1)),...
     AllParameters(11,inds(PL1)),Symbols(jName))
 end
-for iP=2:-1
+for iP=2:4
 %nexttile
+figure(2)
 subplot(1,3,iP-1)
 %scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
 %    20,LogLikelihood(inds),Symbols(jName),'filled')
-if (jName <4 )
+if (jName==2 || jName==3 )
 scatter(AllParameters(xIndex(iP),inds),AllParameters(yIndex(iP),inds),...
     Symbols(jName),'filled')
 hold on
@@ -116,6 +92,7 @@ ylabel(yLabels(iP))
 xlim([xLimits(2*iP-1) xLimits(2*iP)])
 ylim([yLimits(2*iP-1) yLimits(2*iP)])
 box on
+end
 end
 
 if (0)
@@ -145,6 +122,9 @@ plInds=plInds(order);
 Colors=mod(plInds,nSoFar);
 scatter(AllDiffNorms(plInds),...
     AllExSizeErs(plInds),20,Colors,'filled')
+end
+
+if (1)
 
 CandInds=1:nSoFar*nWalker;
 if (jName==5)
@@ -154,7 +134,6 @@ else
 end
 [~,ind]=min(abs(LogLikelihood(CandInds)));
 ind=CandInds(ind);
-
 
 %close all;
 ps=AllParameters(1:end,ind);
@@ -205,6 +184,7 @@ else
 end
 MActin=TotActin/nNz
 
+if (0)
 nexttile
 imagesc(Stats.rSim,Stats.tSim,XCorAvg)
 xlim([0 max(Uvals)])
@@ -213,8 +193,9 @@ clim([-1 1])
 colorbar
 colormap turbo
 xlabel('$\Delta r$ ($\mu$m)')
+yticklabels('')
 
-if (jName>1)
+if (jName>inf)
 nexttile
 plot(dsHist/2:dsHist:400,xp)
 hold on
@@ -222,6 +203,7 @@ plot(dsHist/2:dsHist:400,SizeHist)
 xlabel('Ex size ($\mu$m$^2$)')
 ylabel('pdf')
 xlim([0 200])
+end
 end
 end
 end

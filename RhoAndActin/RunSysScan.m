@@ -1,59 +1,90 @@
+function []=RunSysScan(seed)
 % Bounds for params
 addpath('Inputs/')
-EmType = "nmy-cyk"; % nmy, nmy-cyk, nmy-pfn
-load(strcat(EmType,"_Input.mat"));
-XCorsExp=XCorFilt;
-WtsByR = exp(-Uvals'/2);
-WtsByT = exp(-abs(dtvals)'/120);
-TotWts=WtsByR.*WtsByT;
-XCorNorm=TotWts.*XCorsExp.^2;
-ZeroEr = round(sum(XCorNorm(:)),1);
-nSamp = 2500;
-nSeed = 5;
-nParams = 6;
-PBounds = [0.4 1.22; 0.55 1.5; 0 30; 0 5; 0 10; 0 1];
-AllDiffNorms=zeros(nSeed,nSamp);
+nSamp = 100;
+nSeed = 10;
+nParams = 8;
+numNonZero = 2;
+AllDiffNorms=zeros(nSamp,4)*inf;
 AllParameters=zeros(nParams,nSamp);
-AllExSizeErs = zeros(nSeed,nSamp);
-rng(1);
+AllExSizeErs = zeros(nSamp,4)*inf;
+AllMeanActins = zeros(nSamp,1);
+nNzs = zeros(nSamp,1);
+rng(seed);
+EmTypes = ["Starfish" "nmy" "nmy-pfn" "nmy-cyk"];
+for iType=1:4
+    try
+        load(strcat(EmTypes(iType),"_Input.mat"));
+        AllXCorsExp{iType}=XCorFilt;
+        Alldtvals{iType}=dtvals;
+        AllUvals{iType}=Uvals;
+        AllSizeHist{iType}=SizeHist;
+        AlldsHist{iType}=dsHist;
+    catch
+        load('BementXCorsDS.mat')
+        AllXCorsExp{iType}=DistsByR;
+        Alldtvals{iType}=dtvals;
+        AllUvals{iType}=Uvals;
+    end
+end
 for iSamp=1:nSamp
-    % Make some random params in box
-    r1=rand(6,1);
-    params=PBounds(:,1)+r1.*(PBounds(:,2)-PBounds(:,1));
-%     % Adjustment for actin inhibition
-    % NewBoundsKinh = [max(PBounds(2,1)-params(1),0.2) PBounds(2,2)-params(1)];
-    % params(2) = NewBoundsKinh(1)+r1(2)*(NewBoundsKinh(2)-NewBoundsKinh(1));
-    params(1) = 0.8;
-    params(2) = 0.4;
-    close all;
+    ExSizesAll=[];
+    nNz=0;
+    TotActin=0;
+    rng("shuffle")
+    xr=rand(5,1);
+    Params = [0.8; 0.4; xr(1)*10; xr(2)*5; xr(2)*5; ...
+        xr(3)*15; xr(4)*0.5; xr(5)*1.5];
     for seed=1:nSeed
-        Stats=RhoAndActin(params,seed);
-        % The criterion for moving on is a larger norm than zero PLUS a
-        % local max (-1) in the cross correlation at (0,0)
+        Stats=RhoAndActinBasalNuc(Params,seed,0);
+        % Compute the norm relative to the experiment and the
+        % difference in the excitation size (for C. elegans only)
+        if (Stats.XCor(1)~=0)
+            ExSizesAll=[ExSizesAll;Stats.ExSizes];
+        end
+        % Cross correlation difference
         XCorEr = 1;
         if (Stats.XCor(1)~=0) 
-            InterpolatedSim=ResampleXCor(Stats.XCor,Stats.tSim,Stats.rSim,...
-                Uvals,dtvals,max(Uvals)+1e-3,max(dtvals)+1e-3);
-            XCorEr = TotWts.*(InterpolatedSim-XCorsExp).^2;
-            XCorEr = sum(XCorEr(:))/ZeroEr;
-            WtsEx=(dsHist/2:dsHist:400);
-            xp=histcounts(Stats.ExSizes,0:dsHist:400);
-            xp=xp/(sum(xp)*dsHist);
-            ExSizeDiff = sum((xp-SizeHist).*(xp-SizeHist).*WtsEx)...
-                /sum(SizeHist.*SizeHist.*WtsEx); %L^2 norm
-        else
-            XCorEr=1;
-            ExSizeDiff=1;
+            nNz=nNz+1;
+            if (nNz==1)
+                XCorAvg=Stats.XCor;
+            else
+                XCorAvg=XCorAvg+Stats.XCor;
+            end
+            TotActin=TotActin+Stats.MeanActin;
+            tSimulated=Stats.tSim;
+            rSimulated=Stats.rSim;
         end
-        ForgetIt = XCorEr > 1;
-        AllDiffNorms(seed,iSamp)=XCorEr;
-        AllExSizeErs(seed,iSamp)=ExSizeDiff;
-        if (ForgetIt) % Throw out really bad parameter sets
-            AllDiffNorms(seed+1:end,iSamp)=AllDiffNorms(seed,iSamp);
-            AllExSizeErs(seed+1:end,iSamp)=AllExSizeErs(seed,iSamp);
+        if (nNz==numNonZero)
             break;
         end
     end
-    AllParameters(:,iSamp)=params;
+    % Compute errors 
+    if (nNz>0)
+        XCorAvg=XCorAvg/nNz;
+        for iType=1:4
+            InterpolatedSim=ResampleXCor(XCorAvg,tSimulated,rSimulated,...
+                    AllUvals{iType},Alldtvals{iType},...
+                    max(AllUvals{iType})+1e-3,...
+                    max(Alldtvals{iType})+1e-3);
+            XCorNorm=AllXCorsExp{iType}.^2;
+            ZeroEr = round(sum(XCorNorm(:)),1);
+            XCorEr = (InterpolatedSim-AllXCorsExp{iType}).^2;
+            XCorEr = sum(XCorEr(:))/ZeroEr;
+            AllDiffNorms(iSamp,iType)=XCorEr;
+            if (iType > 1)
+                xp=histcounts(ExSizesAll,0:dsHist:400);
+                xp=xp/(sum(xp)*AlldsHist{iType});
+                ExSizeDiff = sum((xp-AllSizeHist{iType})...
+                    .*(xp-AllSizeHist{iType}))...
+                    /sum(SizeHist.*SizeHist); %L^2 norm
+                AllExSizeErs(iSamp,iType)=ExSizeDiff;
+            end
+        end
+        AllMeanActins(iSamp)=TotActin/nNz;
+        nNzs(iSamp)=nNz;
+    end
+    % Compute errors for each embryo
+    AllParameters(:,iSamp)=Params;
 end
-save('SystematicScan.mat')
+save(strcat('SystematicScanAllNewIC_',num2str(seed),'.mat'))

@@ -1,5 +1,7 @@
-function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
-    MakeMovie=0;
+function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc,RandomNuc,...
+    seed)
+    rng(seed);
+    MakeMovie=1;
     koff0=Params(1);
     rf = Params(2);
     Nuc0=Params(3);
@@ -10,6 +12,7 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
     kbasal=Params(7);
     kfb=Params(8);
     KFB=Params(9);
+    ChangeEvery = 1/koffAct;
     L=20;
     Nx=100; 
     % Solve for the steady states 
@@ -22,20 +25,27 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
     end
     
     %dt = 0.1; % Stability limit is 1
-    tf = 200;
+    tf = 220;
     tsaves = [40];
     saveEvery=floor(1e-6+1/dt);
+    ChangeEverySteps = ceil(ChangeEvery/dt);
     
     % Initialize grid
     dx=L/Nx;
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
     [xg,yg]=meshgrid(x,y);
-    % Set up a wave initial condition
+    % Set up a wave initial condition (works for worms)
+    if (Dv>Du)
     u = ICRange(1,1)+0.5*(1+sin(mmg*2*pi*xg/L).*sin(nmg*2*pi*yg/L))...
-        *(ICRange(1,2)-ICRange(1,1));
+       *(ICRange(1,2)-ICRange(1,1));
     v = ICRange(2,1)+0.5*(1+sin(mmg*2*pi*xg/L).*sin(nmg*2*pi*yg/L))...
-        *(ICRange(2,2)-ICRange(2,1)); 
+       *(ICRange(2,2)-ICRange(2,1)); 
+    else
+    load('Initials.mat') %(starfish)
+    u = uIC;
+    v = sum(vIC,3)*2*pi/8;
+    end
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
     ksq=kx.^2+ky.^2;
@@ -57,8 +67,29 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
     PlotTs=0*tsaves;
     st=1;
     for iT=1:nSt
+        if (RandomNuc && mod(iT-1,ChangeEverySteps)==0)
+            % Each spatial region gets a random theta for nucleation
+            Nuc0s = zeros(Nx);
+            NucEns = zeros(Nx);
+            % % Make rates uniform in theta but not x
+            SquareRegionSize = 4; % in um^2
+            Nreg = ceil(L^2/SquareRegionSize);
+            Regions = MatrixPartition(Nreg,L,Nx,dx);
+            % For spatial anisotropy
+            Vals0ByRegion = 2*rand(Nreg,1)*Nuc0;
+            Vals1ByRegion = 2*rand(Nreg,1)*NucEn;
+            for iX=1:Nx
+                for iY=1:Nx
+                    Nuc0s(iY,iX,:)=Vals0ByRegion(Regions(iY,iX));
+                    NucEns(iY,iX,:)=Vals1ByRegion(Regions(iY,iX));
+                end
+            end
+        elseif (~RandomNuc)
+            Nuc0s=Nuc0*ones(Nx);
+            NucEns=NucEn*ones(Nx);
+        end
         RHS_u = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*v).*u;
-        RHS_v = (Nuc0+NucEn.*u.^2) - koffAct*v;
+        RHS_v = (Nuc0s+NucEns.*u.^2) - koffAct*v;
         RHSHat_u = fft2(u/dt+RHS_u);
         uHatNew = RHSHat_u./DivFacFourier_u;
         uNew = ifft2(uHatNew);
@@ -66,9 +97,7 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
         vHatNew = RHSHat_v./DivFacFourier_v;
         vNew = ifft2(vHatNew);
         u = uNew;
-        u(u<0)=0;
         v = vNew;
-        v(v<0)=0;
         if (max(abs(u(:)) > 1e5))
             st=0;
             warning('Rejecting because of unstable simulation')
@@ -82,7 +111,7 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
             PlotVs(:,index)=reshape(v,[],1);
             PlotTs(index)=iT*dt;
         end
-        if (mod(iT,20)==0 && MakeMovie)
+        if (mod(iT,50)==0 && MakeMovie)
             tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
             nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
@@ -112,8 +141,8 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
     if (postproc)
-        AllActin=AllActin(:,:,41:end);
-        AllRho=AllRho(:,:,41:end);
+        AllActin=AllActin(:,:,21:end);
+        AllRho=AllRho(:,:,21:end);
         if (size(rts(:,1))>1)
             Thres=rts(1,2);
         else
@@ -142,4 +171,6 @@ function [Statistics,st] = RhoAndActinPDEs(Params,dt,postproc)
     else
         Statistics=[];
     end
+    KymoPlot
+    keyboard
 end

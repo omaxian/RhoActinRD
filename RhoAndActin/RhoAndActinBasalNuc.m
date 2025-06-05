@@ -5,7 +5,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=0;
+    MakeMovie=doPlot;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -21,7 +21,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Nuc0=Params(7);
     NucEn=Params(8)/max(StSt)^2;
     dt = 0.25; % Stability limit is 1
-    tf = 200;
+    tf = 201;
     Du=0.1; % The size of the waves depends on Du
     tsaves = [40];
     % Parameters for the actin
@@ -45,8 +45,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     dx=L/Nx;
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
-    %[xg,yg]=meshgrid(x,y);
+    [xg,yg]=meshgrid(x,y);
     u = ones(Nx,Nx)*ICScale;
+    u(xg/L<0.4 | xg/L> 0.6 | yg/L < 0.4 | yg/L > 0.6)=min(StSt);
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
     ksq=kx.^2+ky.^2;
@@ -58,7 +59,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
 
     if (MakeMovie)
         close all;
-        f=figure('Position',[100 100 300 300]);
+        f=figure('Position',[100 100 500 500]);
     end
     % Set up an initial actin grid
     [Xf,nPerFil,~] = SetUpActin(L,ds,[],PoreSize,nFilSt,MaxLength);
@@ -125,18 +126,23 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             hold on
             if (~isempty(Xf))
                 Xfpl=Xf-floor(Xf/L)*L;
-                plot(Xfpl(:,1),Xfpl(:,2),'ko','MarkerSize',0.25,'LineWidth',1)
+                scatter(Xfpl(:,1),Xfpl(:,2),10,'o','filled',...
+                    'MarkerFaceColor',[0.8500    0.3250    0.0980],...
+                    'MarkerEdgeColor','None',...
+                    'MarkerFaceAlpha',0.5)
             end
             %colorbar
             %clim([0 StSt(end)])
             %colormap("turbo")
             title(sprintf('$t= %1.1f$',t))
             clim([0 max(StSt)])
-            colormap(turbo)
+            colormap(sky)
             hold off
             pbaspect([1 1 1])
             xlabel('$x$ ($\mu$m)')
             ylabel('$y$ ($\mu$m)')
+            yticks(0:5:15)
+            xticks(0:5:15)
             movieframes(iT)=getframe(f);
         end
         if (mod(iT-1,saveEvery)==0)
@@ -145,7 +151,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
             xCoords{(iT-1)/saveEvery+1}=...
-                Xfpl(Xfpl(:,2)>(Nx/2-1)*dx & Xfpl(:,2)<Nx/2*dx,1);
+                Xfpl(Xfpl(:,2)>(Nx/4-1)*dx & Xfpl(:,2)<Nx/4*dx,1);
         end
     end
     % Post-process to get cross correlations and excitation sizes
@@ -153,6 +159,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     BurnIn=40;
     AllActin=AllActin(:,:,BurnIn+1:end);
     AllRho=AllRho(:,:,BurnIn+1:end);
+    xCoords=xCoords(BurnIn+1:end);
     if (size(StSt)>1)
         Thres=StSt(2);
     else
@@ -178,14 +185,14 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.ExSizes=ExSizes;
     Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
-    if (0)
+    if (doPlot)
         nexttile
         [~,nPlot]=size(PlotUs);
         %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:0
             %nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
-            title(strcat('$t=$',num2str(PlotTs(iT))))
+            %title(strcat('$t=$',num2str(PlotTs(iT))))
             clim([min(PlotUs(:)) max(PlotUs(:))])
             %clim([0 3])
             set(gca,'YDir','Normal')
@@ -193,7 +200,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             hold on
             pbaspect([1 1 1])
             if (~isempty(Xf))
-                plot(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),'ko','MarkerSize',0.05)
+                scatter(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),2,'s', ...
+                    'MarkerFaceColor',[1 1 1],...
+                    'MarkerEdgeColor','None','MarkerFaceAlpha',0.5)
             end
             % if (iT==nPlot)
             %     colorbar
@@ -201,19 +210,23 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             % if (iT==1)
             %     ylabel('$y$ ($\mu$m)')
             % end
-            xlabel('$x$ ($\mu$m)')
+            %xlabel('$x$ ($\mu$m)')
+            xticklabels('')
+            yticklabels('')
         end
         % Kymograph
-        % figure;
         RhoT=reshape(AllRho(Nx/4,:,:),Nx,tf-BurnIn)';
         imagesc((0:Nx-1)*dx,0:tf-BurnIn-1,RhoT)
         colormap turbo
         hold on
         for j=1:tf-BurnIn
             xpl=xCoords{j};
-            plot(xpl,(j-1)*ones(length(xpl),1),'ko','MarkerSize',0.01)
+            scatter(xpl,(j-1)*ones(length(xpl),1),2,'s', ...
+                    'MarkerFaceColor',[1 1 1],...
+                    'MarkerEdgeColor','None','MarkerFaceAlpha',0.5)
         end
         xlabel('$x$ ($\mu$m)')
-        pbaspect([1 1.5 1])
+        pbaspect([1 1.25 1])
+        yticklabels('')
     end
 end
