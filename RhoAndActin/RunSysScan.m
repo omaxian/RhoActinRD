@@ -1,4 +1,4 @@
-function []=RunSysScan(seed)
+function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath('Inputs/')
 nSamp = 100;
@@ -10,7 +10,7 @@ AllParameters=zeros(nParams,nSamp);
 AllExSizeErs = zeros(nSamp,4)*inf;
 AllMeanActins = zeros(nSamp,1);
 nNzs = zeros(nSamp,1);
-rng(seed);
+rng(RandomSeed);
 EmTypes = ["Starfish" "nmy" "nmy-pfn" "nmy-cyk"];
 for iType=1:4
     try
@@ -87,4 +87,4 @@ for iSamp=1:nSamp
     % Compute errors for each embryo
     AllParameters(:,iSamp)=Params;
 end
-save(strcat('SystematicScanAllNewIC_',num2str(seed),'.mat'))
+save(strcat('SystematicScanAllNewIC_',num2str(RandomSeed),'.mat'))
