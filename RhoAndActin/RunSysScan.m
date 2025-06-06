@@ -1,7 +1,7 @@
 function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath('Inputs/')
-nSamp = 100;
+nSamp = 2500;
 nSeed = 10;
 nParams = 8;
 numNonZero = 2;
@@ -31,10 +31,12 @@ for iSamp=1:nSamp
     ExSizesAll=[];
     nNz=0;
     TotActin=0;
-    rng("shuffle")
+    if (iSamp>1)
+        rng("shuffle")
+    end
     xr=rand(5,1);
-    Params = [0.8; 0.4; xr(1)*10; xr(2)*5; xr(2)*5; ...
-        xr(3)*15; xr(4)*0.5; xr(5)*1.5];
+    Params = [0.8; 0.4; xr(1)*40; xr(2)*5; xr(2)*5; ...
+        xr(3)*15; xr(4)*0.5; xr(5)*3];
     for seed=1:nSeed
         Stats=RhoAndActinBasalNuc(Params,seed,0);
         % Compute the norm relative to the experiment and the
@@ -77,7 +79,7 @@ for iSamp=1:nSamp
                 xp=xp/(sum(xp)*AlldsHist{iType});
                 ExSizeDiff = sum((xp-AllSizeHist{iType})...
                     .*(xp-AllSizeHist{iType}))...
-                    /sum(SizeHist.*SizeHist); %L^2 norm
+                    /sum(AllSizeHist{iType}.*AllSizeHist{iType}); %L^2 norm
                 AllExSizeErs(iSamp,iType)=ExSizeDiff;
             end
         end
@@ -87,4 +89,4 @@ for iSamp=1:nSamp
     % Compute errors for each embryo
     AllParameters(:,iSamp)=Params;
 end
-save(strcat('SystematicScanAllNewIC_',num2str(RandomSeed),'.mat'))
+save(strcat('Scank8_',num2str(RandomSeed),'.mat'))
