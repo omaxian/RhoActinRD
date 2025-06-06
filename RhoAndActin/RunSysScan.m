@@ -10,7 +10,7 @@ AllParameters=zeros(nParams,nSamp);
 AllExSizeErs = zeros(nSamp,4)*inf;
 AllMeanActins = zeros(nSamp,1);
 nNzs = zeros(nSamp,1);
-rng(RandomSeed);
+rng(str2num(RandomSeed));
 EmTypes = ["Starfish" "nmy" "nmy-pfn" "nmy-cyk"];
 for iType=1:4
     try
