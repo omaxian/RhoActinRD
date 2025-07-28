@@ -1,3 +1,4 @@
+% For parameter scanning
 function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath('Inputs/')
@@ -36,7 +37,7 @@ for iSamp=1:nSamp
     end
     xr=rand(5,1);
     Params = [0.8; 0.4; xr(1)*40; xr(2)*5; xr(2)*5; ...
-        xr(3)*15; xr(4)*0.5; xr(5)*3];
+        xr(3)*15; xr(4)*0.3; xr(5)*3];
     for seed=1:nSeed
         Stats=RhoAndActinBasalNuc(Params,seed,0);
         % Compute the norm relative to the experiment and the
@@ -77,9 +78,10 @@ for iSamp=1:nSamp
             if (iType > 1)
                 xp=histcounts(ExSizesAll,0:dsHist:400);
                 xp=xp/(sum(xp)*AlldsHist{iType});
+                Wts = (dsHist/2:dsHist:400);
                 ExSizeDiff = sum((xp-AllSizeHist{iType})...
-                    .*(xp-AllSizeHist{iType}))...
-                    /sum(AllSizeHist{iType}.*AllSizeHist{iType}); %L^2 norm
+                    .*(xp-AllSizeHist{iType}).*Wts)...
+                    /sum(AllSizeHist{iType}.*AllSizeHist{iType}.*Wts); %L^2 norm
                 AllExSizeErs(iSamp,iType)=ExSizeDiff;
             end
         end

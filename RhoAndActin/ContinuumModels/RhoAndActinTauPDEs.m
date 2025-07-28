@@ -1,9 +1,15 @@
+% This file simulates the orientational actin model in Fig. 5(E,F) in the
+% paper. The idea is that actin filaments are transported by advection
+% rather than diffusion. We keep track of the density of actin
+% f(x,t,theta), where theta is the tangent vector angle in 2D
 %function [Statistics,st] = RhoAndActinTauPDEs(Params,seed,postproc)
-seed=1;
+load('Params.mat')
+seed=3;
 postproc=1;
 rng(seed);
-Params=pStar;
-MakeMovie=0;
+Params=pShortActin; % For Fig. 5E
+Params=pActin2; % For Fig. 5F
+MakeMovie=1;
 advorder=1;
 RandomOrient=1;
 koff0=Params(1);
@@ -30,7 +36,7 @@ else
 end
 
 dt = 0.025; % Stability limit is 1
-tf = 220;
+tf = 240;
 tsaves = [40];
 saveEvery=floor(1e-6+1/dt);
 ChangeEverySteps = ceil(ChangeEvery/dt);
@@ -98,7 +104,7 @@ for iT=1:nSt
         Nuc0s = zeros(Nx,Nx,Nth);
         NucEns = zeros(Nx,Nx,Nth);
         % Make rates uniform in theta but not x
-        SquareRegionSize = 4; % in um^2
+        SquareRegionSize = 16; % in um^2
         Nreg = ceil(L^2/SquareRegionSize);
         Regions = MatrixPartition(Nreg,L,Nx,dx);
         Angles0ByRegion = ceil(rand(Nreg,1)*Nth);
@@ -133,32 +139,38 @@ for iT=1:nSt
     end
     if (mod(iT,saveEvery)==0 && MakeMovie)
         tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
-        nexttile
+        ax1=nexttile;
         imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
         set(gca,'YDir','Normal')
-        %colorbar
         %clim([0 StSt(end)])
         %clim([0 0.9])
         %colormap("turbo")
-        title(sprintf('$t= %1.1f$',iT*dt))
+        title(sprintf('Rho; $t= %1.1f$',iT*dt-40))
         %clim(ICRange(1,:))
-        colormap(turbo)
-        colorbar
+        colormap(ax1,"sky")
+        %colorbar
         pbaspect([1 1 1])
-        nexttile
+        xlabel("$x$ ($\mu$m)")
+        ylabel("$y$ ($\mu$m)")
+        ax2=nexttile;
         vBarX = sum(v,3)*dth;
         imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,vBarX);
         set(gca,'YDir','Normal')
         pbaspect([1 1 1])
-        colormap(turbo)
+        C2=[0.87 0.49 0];
+        C1=[0.95 0.9 0.9];
+        Cmap=C1+(0:100)'/100.*(C2-C1);
+        colormap(ax2,Cmap)
         vBarThet=sum(v.*thForAvg*dth,3)./vBarX;
         [~,ThetInd] = max(v,[],3);
         vBarThet=th(ThetInd);
         hold on
         quiver(xg(1:5:end,1:5:end),yg(1:5:end,1:5:end),...
             cos(vBarThet(1:5:end,1:5:end)),...
-            sin(vBarThet(1:5:end,1:5:end)),'k')
-        colorbar
+            sin(vBarThet(1:5:end,1:5:end)),0.5,'k')
+        %colorbar
+        title(sprintf('Actin; $t= %1.1f$',iT*dt-40))
+        xlabel("$x$ ($\mu$m)")
         %clim([6 20])
         %clim(ICRange(2,:))
         movieframes(iT)=getframe(f);
@@ -176,9 +188,9 @@ end
 %return
 
     if (postproc)
-        AllActin=AllActin(:,:,21:end);
-        AllRho=AllRho(:,:,21:end);
-        AllAngles=AllAngles(:,:,21:end);
+        AllActin=AllActin(:,:,41:end);
+        AllRho=AllRho(:,:,41:end);
+        AllAngles=AllAngles(:,:,41:end);
         if (size(rts(:,1))>1)
             Thres=rts(1,2);
         else

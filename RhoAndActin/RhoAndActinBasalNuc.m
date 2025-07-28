@@ -1,3 +1,4 @@
+% This is tma
 function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Parameters:
     % koff0, rf, FullLifetime, Grow, Shrink, MaxLength, Nuc0, NucEn 
@@ -21,9 +22,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Nuc0=Params(7);
     NucEn=Params(8)/max(StSt)^2;
     dt = 0.25; % Stability limit is 1
-    tf = 201;
+    tf = 241;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [40];
+    tsaves = [40 240];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -47,7 +48,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     y=(0:Nx-1)*dx;
     [xg,yg]=meshgrid(x,y);
     u = ones(Nx,Nx)*ICScale;
-    u(xg/L<0.4 | xg/L> 0.6 | yg/L < 0.4 | yg/L > 0.6)=min(StSt);
+    %u(xg/L<0.4 | xg/L> 0.6 | yg/L < 0.4 | yg/L > 0.6)=min(StSt);
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
     ksq=kx.^2+ky.^2;
@@ -120,21 +121,21 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             PlotXfs{index}=Xf-floor(Xf/L)*L;
             PlotTs(index)=iT*dt;
         end
-        if (mod(iT-1,4)==0 && MakeMovie)
+        if (mod(iT-1,40)==0 && MakeMovie)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
             hold on
             if (~isempty(Xf))
                 Xfpl=Xf-floor(Xf/L)*L;
                 scatter(Xfpl(:,1),Xfpl(:,2),10,'o','filled',...
-                    'MarkerFaceColor',[0.8500    0.3250    0.0980],...
+                    'MarkerFaceColor',[0.87    0.49    0.0],...
                     'MarkerEdgeColor','None',...
                     'MarkerFaceAlpha',0.5)
             end
             %colorbar
             %clim([0 StSt(end)])
             %colormap("turbo")
-            title(sprintf('$t= %1.1f$',t))
+            title(sprintf('$t= %1.1f$',t-40))
             clim([0 max(StSt)])
             colormap(sky)
             hold off
@@ -150,8 +151,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             AllActin(:,:,(iT-1)/saveEvery+1)=fg;
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
+            kymopt=Nx/2;
             xCoords{(iT-1)/saveEvery+1}=...
-                Xfpl(Xfpl(:,2)>(Nx/4-1)*dx & Xfpl(:,2)<Nx/4*dx,1);
+                Xfpl(Xfpl(:,2)>(kymopt-1)*dx & Xfpl(:,2)<kymopt*dx,1);
         end
     end
     % Post-process to get cross correlations and excitation sizes
@@ -185,24 +187,26 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.ExSizes=ExSizes;
     Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
-    if (doPlot)
-        nexttile
+    if (0)
+        % Snapshots
         [~,nPlot]=size(PlotUs);
-        %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
-        for iT=1:0
-            %nexttile
+        tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+        for iT=1:2
+            figure(iT+1)
+            nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             %title(strcat('$t=$',num2str(PlotTs(iT))))
-            clim([min(PlotUs(:)) max(PlotUs(:))])
+            clim([min(AllRho(:)) max(AllRho(:))])
             %clim([0 3])
             set(gca,'YDir','Normal')
-            colormap(turbo)
+            colormap(sky)
             hold on
             pbaspect([1 1 1])
             if (~isempty(Xf))
-                scatter(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),2,'s', ...
-                    'MarkerFaceColor',[1 1 1],...
-                    'MarkerEdgeColor','None','MarkerFaceAlpha',0.5)
+                scatter(PlotXfs{iT}(:,1),PlotXfs{iT}(:,2),2.5,'o','filled',...
+                    'MarkerFaceColor',[0.87    0.49    0],...
+                    'MarkerEdgeColor','None',...
+                    'MarkerFaceAlpha',0.35)
             end
             % if (iT==nPlot)
             %     colorbar
@@ -215,17 +219,21 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             yticklabels('')
         end
         % Kymograph
-        RhoT=reshape(AllRho(Nx/4,:,:),Nx,tf-BurnIn)';
+        figure(4)
+        nexttile
+        RhoT=reshape(AllRho(kymopt,:,:),Nx,tf-BurnIn)';
         imagesc((0:Nx-1)*dx,0:tf-BurnIn-1,RhoT)
-        colormap turbo
+        colormap sky
         hold on
         for j=1:tf-BurnIn
             xpl=xCoords{j};
             scatter(xpl,(j-1)*ones(length(xpl),1),2,'s', ...
-                    'MarkerFaceColor',[1 1 1],...
-                    'MarkerEdgeColor','None','MarkerFaceAlpha',0.5)
+                    'MarkerFaceColor',[0.87    0.49    0],...
+                    'MarkerEdgeColor','None',...
+                    'MarkerFaceAlpha',0.04)
         end
-        xlabel('$x$ ($\mu$m)')
+        %xlabel('$x$ ($\mu$m)')
+        xticklabels('')
         pbaspect([1 1.25 1])
         yticklabels('')
     end
