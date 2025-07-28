@@ -187,5 +187,5 @@ if (postproc)
 else
     Statistics=[];
 end
-KymoPlot
+%KymoPlot
 %end
