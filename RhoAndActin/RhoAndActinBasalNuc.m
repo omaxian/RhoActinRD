@@ -24,7 +24,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     dt = 0.25; % Stability limit is 1
     tf = 241;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [40 240];
+    tsaves = [40];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -151,7 +151,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             AllActin(:,:,(iT-1)/saveEvery+1)=fg;
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
-            kymopt=Nx/2;
+            kymopt=Nx/4;
             xCoords{(iT-1)/saveEvery+1}=...
                 Xfpl(Xfpl(:,2)>(kymopt-1)*dx & Xfpl(:,2)<kymopt*dx,1);
         end
@@ -191,7 +191,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         % Snapshots
         [~,nPlot]=size(PlotUs);
         tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
-        for iT=1:2
+        for iT=1:length(tsaves)
             figure(iT+1)
             nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
@@ -232,9 +232,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
                     'MarkerEdgeColor','None',...
                     'MarkerFaceAlpha',0.04)
         end
-        %xlabel('$x$ ($\mu$m)')
-        xticklabels('')
+        xlabel('$x$ ($\mu$m)')
+        %xticklabels('')
         pbaspect([1 1.25 1])
-        yticklabels('')
+        %yticklabels('')
     end
 end

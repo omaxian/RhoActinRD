@@ -3,7 +3,7 @@
 %    seed)
 load('Params.mat')
 Params=pStarStart; % starfish (5A)
-Params=pShortActin; % actin (5B)
+%Params=pShortActin; % actin (5B)
 RandomNuc=0; % toggle to enable random spatial nucleation
 SquareRegionSize = 16; % in um^2 if doing random spatial nucleation
 dt=0.1;
@@ -159,8 +159,8 @@ end
 if (postproc)
     AllActin=AllActin(:,:,141:end);
     AllRho=AllRho(:,:,141:end);
-    if (size(rts(:,1))>1)
-        Thres=rts(1,2);
+    if (length(rts(:,1))>1)
+        Thres=rts(2,1);
     else
         Thres=mean(AllRho(:));
     end

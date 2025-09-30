@@ -1,7 +1,11 @@
-% This file will output the movies in Fig. 2, and provides a starting point
+% This file will output the movies in Fig. 2 and 4, and provides a starting point
 % for running the code with a given parameter set 
-close all;
-ps=load('ParamsForFig2.mat');   
+set(groot,'defaulttextInterpreter','latex')
+set(groot, 'defaultAxesTickLabelInterpreter','latex');
+set(groot, 'defaultLegendInterpreter','latex');
+%close all;
+%ps=load('ParamsForActCor.mat');   % Figure 4
+ps=load('ParamsForFig2.mat');   % Figure 2 instead
 nSeed=10;
 numNonZero=2;
 
@@ -80,7 +84,6 @@ for iType = 1:4
     end
     
     % Cross correlations compared to data
-    % figure(1)
     % nexttile
     % imagesc(rSimulated,tSimulated,XCorAvg)
     % xlim([0 max(Uvals)])

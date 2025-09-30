@@ -1,12 +1,12 @@
 % Cross correlation profiles in experimental data
-Name='nmy-cyk';
+%Name='nmy-cyk';
 Widths = [50];
 Threses = [0.1];
 TimePlot=400;
 for iFw=1:length(Widths)
 %nexttile
 for iThr=1:length(Threses)
-MovieNum=2;
+%MovieNum=2;
 pxlSize = 0.1;
 Rho=double(load(strcat(Name,'Rho_',num2str(MovieNum),'.mat')).RhoData);
 Actin=double(load(strcat(Name,'Actin_',num2str(MovieNum),'.mat')).ActinData);
@@ -16,11 +16,11 @@ FrTime = Info.Info.TimeInt;
 % Bement data
 % pxlSize = 120/212;
 % FrTime = 330/72;
-Rho=tiffreadVolume("BementRho.tif");
-Actin=tiffreadVolume("BementRGA.tif");
+% Rho=tiffreadVolume("BementRho.tif");
+% Actin=tiffreadVolume("BementRGA.tif");
 %Difference subtraction (removes static signal)
-Rho=Rho-Rho(:,:,end);
-Actin=Actin-Actin(:,:,end);
+% Rho=Rho-Rho(:,:,end);
+% Actin=Actin-Actin(:,:,end);
 % Adjust so that each frame has same mean
 GlobalMeanRho=mean(Rho(:));
 GlobalMeanActin=mean(Actin(:));

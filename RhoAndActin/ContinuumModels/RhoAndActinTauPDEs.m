@@ -1,24 +1,26 @@
-% This file simulates the orientational actin model in Fig. 5(E,F) in the
+% This file simulates the orientational actin model in Fig. 5 in the
 % paper. The idea is that actin filaments are transported by advection
 % rather than diffusion. We keep track of the density of actin
 % f(x,t,theta), where theta is the tangent vector angle in 2D
 %function [Statistics,st] = RhoAndActinTauPDEs(Params,seed,postproc)
 load('Params.mat')
-seed=3;
+seed=1; % 1 for Fig 5D,E; 2 for F,G and 1 for Fig. S10
 postproc=1;
 rng(seed);
-Params=pShortActin; % For Fig. 5E
-Params=pActin2; % For Fig. 5F
+Params=pStarStart;
 MakeMovie=1;
 advorder=1;
 RandomOrient=1;
+RandomNucRate=1;
+nAng=8;
 koff0=Params(1);
 rf = Params(2);
 Nuc0=Params(3);
 NucEn=Params(4);
 koffAct = Params(5);
+RandRegionLength = 1/2; % in um
 Du = 0.1; % The size of the waves depends on Du
-vp = 1;%Params(6);
+vp =Params(6);
 kbasal=Params(7);
 kfb=Params(8);
 KFB=Params(9);
@@ -36,7 +38,7 @@ else
 end
 
 dt = 0.025; % Stability limit is 1
-tf = 240;
+tf = 241;
 tsaves = [40];
 saveEvery=floor(1e-6+1/dt);
 ChangeEverySteps = ceil(ChangeEvery/dt);
@@ -59,6 +61,9 @@ load('Initials.mat') %(starfish)
 u = uIC;
 v0 = sum(vIC,3)*2*pi/8;
 end
+Nreg1D = round(L/RandRegionLength);
+Regions = RegularMatrixPartition(Nreg1D,L,Nx);
+Nreg = max(Regions(:));
 xvels = zeros(Nx,Nx,Nth);
 yvels = zeros(Nx,Nx,Nth);
 thForAvg = zeros(Nx,Nx,Nth);
@@ -83,6 +88,8 @@ if (MakeMovie)
     close all;
     f=figure('Position',[100 100 700 400]);
 end
+AngleDoneInReg1=zeros(Nth,nSave);
+AngleDoneInReg2=zeros(Nth,nSave);
 
 % Run simulation
 PlotUs=zeros(Nx^2,length(tsaves));
@@ -104,20 +111,38 @@ for iT=1:nSt
         Nuc0s = zeros(Nx,Nx,Nth);
         NucEns = zeros(Nx,Nx,Nth);
         % Make rates uniform in theta but not x
-        SquareRegionSize = 16; % in um^2
-        Nreg = ceil(L^2/SquareRegionSize);
-        Regions = MatrixPartition(Nreg,L,Nx,dx);
-        Angles0ByRegion = ceil(rand(Nreg,1)*Nth);
-        Angles1ByRegion = ceil(rand(Nreg,1)*Nth);
+        AnglesByRegion = zeros(Nreg,nAng);
+        if (RandomNucRate)
+            ValsByRegion = 2*rand(Nreg,1);
+        else
+            ValsByRegion = ones(Nreg,1);
+        end
+        for jR=1:Nreg
+            AnglesByRegion(jR,:) = randperm(Nth,nAng);
+        end
         for iX=1:Nx
             for iY=1:Nx
-                Nuc0s(iY,iX,Angles0ByRegion(Regions(iY,iX)))...
-                    =Nuc0/dth;
-                NucEns(iY,iX,Angles1ByRegion(Regions(iY,iX)))...
-                    =NucEn/dth;
+                for iTh=1:nAng
+                    NucEns(iY,iX,AnglesByRegion(Regions(iY,iX),iTh))...
+                        =ValsByRegion(Regions(iY,iX))*NucEn/dth*1/nAng;
+                    Nuc0s(iY,iX,AnglesByRegion(Regions(iY,iX),iTh))...
+                        =ValsByRegion(Regions(iY,iX))*Nuc0/dth*1/nAng;
+                end
             end
         end
-    elseif (~RandomOrient)
+    elseif (RandomNucRate && mod(iT-1,ChangeEverySteps)==0)
+        % Each spatial region gets a random theta for nucleation
+        Nuc0s = zeros(Nx,Nx,Nth);
+        NucEns = zeros(Nx,Nx,Nth);
+        % Make rates uniform in theta but not x
+        ValsByRegion = 2*rand(Nreg,1);
+        for iX=1:Nx
+            for iY=1:Nx
+                Nuc0s(iY,iX,:)=ValsByRegion(Regions(iY,iX))*Nuc0/(2*pi);
+                NucEns(iY,iX,:)=ValsByRegion(Regions(iY,iX))*NucEn/(2*pi);
+            end
+        end
+    elseif (~RandomOrient && ~RandomNucRate)
         Nuc0s = Nuc0*ones(Nx,Nx,Nth)/(2*pi);
         NucEns = NucEn*ones(Nx,Nx,Nth)/(2*pi);
     end
@@ -130,6 +155,9 @@ for iT=1:nSt
     end
     u = uNew;
     v = vNew;
+    AngleDoneInReg1(find(Nuc0s(20,20,:)>0),iT)=1;
+    AngleDoneInReg2(find(Nuc0s(50,50,:)>0),iT)=1;
+    NucEnsTime(iT)=NucEns(20,20,1)*2*pi/NucEn;
     if (max(abs(u(:)) > 1e5))
         st=0;
         warning('Rejecting because of unstable simulation')
@@ -169,7 +197,7 @@ for iT=1:nSt
             cos(vBarThet(1:5:end,1:5:end)),...
             sin(vBarThet(1:5:end,1:5:end)),0.5,'k')
         %colorbar
-        title(sprintf('Actin; $t= %1.1f$',iT*dt-40))
+        title(sprintf('F-actin; $t= %1.1f$',iT*dt-40))
         xlabel("$x$ ($\mu$m)")
         %clim([6 20])
         %clim(ICRange(2,:))
@@ -191,8 +219,8 @@ end
         AllActin=AllActin(:,:,41:end);
         AllRho=AllRho(:,:,41:end);
         AllAngles=AllAngles(:,:,41:end);
-        if (size(rts(:,1))>1)
-            Thres=rts(1,2);
+        if (length(rts(:,1))>1)
+            Thres=rts(2,1);
         else
             Thres=mean(AllRho(:));
         end
@@ -222,64 +250,61 @@ end
 %end
 
 % Make plots
+KymoLoc=40;
 tiledlayout(2,2,'Padding', 'none', 'TileSpacing', 'compact')
-nexttile
+ax1=nexttile;
 imagesc(x,y,AllRho(:,:,1))
 clim([min(AllRho(:)) max(AllRho(:))])
 pbaspect([1 1 1])
 ylabel('$y$ ($\mu$m)')
 set(gca,'YDir','Normal')
-nexttile
+colormap(ax1,sky)
+ax2=nexttile;
 imagesc(x,y,AllActin(:,:,1))
 clim([min(AllActin(:)) max(AllActin(:))])
 hold on
 quiver(xg(1:5:end,1:5:end),yg(1:5:end,1:5:end),...
-cos(AllAngles(1:5:end,1:5:end,1)),...
-sin(AllAngles(1:5:end,1:5:end,1)),'w','LineWidth',1)
+    cos(AllAngles(1:5:end,1:5:end,1)),...
+    sin(AllAngles(1:5:end,1:5:end,1)),0.5,...
+    'Color',[0.3 0.3 0.3],'LineWidth',1)
 pbaspect([1 1 1])
 set(gca,'YDir','Normal')
 yticklabels('')
-colormap sky
-RhoKymo=reshape(AllRho(75,:,1:end),Nx,size(AllRho,3))'; 
-nexttile
+C2=[0.87 0.49 0];
+C1=[0.95 0.9 0.9];
+Cmap=C1+(0:100)'/100.*(C2-C1);
+colormap(ax2,Cmap)
+RhoKymo=reshape(AllRho(KymoLoc,:,1:end),Nx,size(AllRho,3))'; 
+ax3=nexttile;
 imagesc(x,0:size(AllActin,3)-1,RhoKymo)
 clim([min(AllRho(:)) max(AllRho(:))])
 pbaspect([1 1 1])
 ylabel('$t$ (s)')
 xlabel('$x$ ($\mu$m)')
-ActKymo=reshape(AllActin(75,:,1:end),Nx,size(AllRho,3))';
+colormap(ax3,sky)
+ActKymo=reshape(AllActin(KymoLoc,:,1:end),Nx,size(AllRho,3))';
 % Quiver on top of that
-u = reshape(cos(AllAngles(75,:,1:end)),Nx,size(AllRho,3))';
-v = reshape(sin(AllAngles(75,:,1:end)),Nx,size(AllRho,3))';
+u = reshape(cos(AllAngles(KymoLoc,:,1:end)),Nx,size(AllRho,3))';
+v = reshape(sin(AllAngles(KymoLoc,:,1:end)),Nx,size(AllRho,3))';
 [xpl,tpl]=meshgrid(x,(0:size(AllActin,3)-1)/9);
-nexttile
+ax4=nexttile;
 imagesc(x,(0:size(AllActin,3)-1)/9,ActKymo)
 clim([min(AllActin(:)) max(AllActin(:))])
 hold on
 quiver(xpl(1:5:end,1:5:end),tpl(1:5:end,1:5:end),...
-    u(1:5:end,1:5:end),0*v(1:5:end,1:5:end),'w','LineWidth',1)
+    u(1:5:end,1:5:end),0*v(1:5:end,1:5:end),0.7,...
+    'Color',[0.3 0.3 0.3],'LineWidth',1)
 pbaspect([1 1 1])
 yticklabels('')
 xlabel('$x$ ($\mu$m)')
-% nexttile
-% imagesc(rSim,tSim,Statistics.XCor)
-% xlim([0 5])
-% ylim([-120 120])
-% clim([-1 1])
-% xlabel('$\Delta r$ ($\mu$m)')
-% ylabel('$\Delta t$ (s)')
-% pbaspect([1 1 1])
-% nexttile
-% dsHist=4;
-% xp=histcounts(ExSizes,0:dsHist:400);
-% xp=xp/(sum(xp)*dsHist);
-% plot(dsHist/2:dsHist:400,xp)
-% xlim([0 200])
-% xlabel('Excitation size ($\mu$m$^2$)')
-% ylabel('pdf')
-% pbaspect([1 1 1])
+colormap(ax4,Cmap)
 
-C2=[0.87 0.49 0];
-C1=[0.95 0.9 0.9];
-Cmap=C1+(0:100)'/100.*(C2-C1);
-colormap(Cmap)
+figure(4)
+imagesc(rSim,tSim,Statistics.XCor)
+xlim([0 10])
+ylim([-120 120])
+clim([-1 1])
+xlabel('$\Delta r$ ($\mu$m)')
+ylabel('$\Delta t$ (s)')
+colormap turbo
+xlim([0 5])

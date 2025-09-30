@@ -1,13 +1,13 @@
-% Extract cross correlations and excitation sizes from filtered data 
+% % Extract cross correlations and excitation sizes from filtered data 
 % tmax=120;
 % rmax=5;
-Name='nmy';
-numMovies=4;
-for MovieNum=1:numMovies
-    AnalyzeCorrelations;
-    clearvars -except AllExes DistsByRF dtvalsF NumExes UvalsF tmax rmax Name MovieNum numMovies
-    save(strcat("Processed_",Name,"_",num2str(MovieNum),".mat"));
-end
+% Name='spd';
+% numMovies=10;
+% for MovieNum=1:numMovies
+%     AnalyzeCorrelations;
+%     clearvars -except AllExes DistsByRF dtvalsF NumExes UvalsF tmax rmax Name MovieNum numMovies
+%     save(strcat("Processed_",Name,"_",num2str(MovieNum),".mat"));
+% end
  
 % Averaging and overall distribution
 % Make all xcors the same size
@@ -43,8 +43,8 @@ SizeHist = mean(xps);
 Uvals=UvalsF;
 dtvals=dtvalsF;
 % Fit size hist with log
-xmarks=dsHist/2:dsHist:400;
-p=polyfit(xmarks(SizeHist>0),log(SizeHist(SizeHist>0)),1);
-NormalizedFit=exp(p(1)*xmarks)/(sum(exp(p(1)*xmarks))*dsHist);
-plot(xmarks,SizeHist,xmarks,NormalizedFit)
-SizeHistFit = NormalizedFit;
+% xmarks=dsHist/2:dsHist:400;
+% p=polyfit(xmarks(SizeHist>0),log(SizeHist(SizeHist>0)),1);
+% NormalizedFit=exp(p(1)*xmarks)/(sum(exp(p(1)*xmarks))*dsHist);
+% plot(xmarks,SizeHist,xmarks,NormalizedFit)
+% SizeHistFit = NormalizedFit;

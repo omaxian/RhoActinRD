@@ -6,10 +6,10 @@
 pxlSize=0.1;
 figure;
 tiledlayout(2,2,'Padding', 'none', 'TileSpacing', 'compact')
-NameAll='/Users/ondrejmaxian/Documents/CHICAGO/SRD/Baixue_data/nmy-cyk';
+NameAll='/Users/ondrejmaxian/Documents/CHICAGO/SRD/Baixue_data/spd';
 theFiles = dir(fullfile(strcat(NameAll,'/')));
 theFolders = theFiles(3:end);
-for iF=4%2:length(theFolders)
+for iF=7
     % Go into the folder
     Name = theFolders(iF).name;
     RhoFile = dir(fullfile(strcat(NameAll,'/',Name),strcat(Name,'*','G.tif')));
@@ -36,11 +36,6 @@ for iF=4%2:length(theFolders)
     Filtx=smoothdata(RhoTimeSeries,1,'sgolay',50);
     Filtxy=smoothdata(Filtx,2,'sgolay',50);
     FiltRho=smoothdata(Filtxy,3,'sgolay',50);
-    nexttile
-    imagesc(FiltRho(:,:,1))
-    % FiltEm=FiltRho;
-    % PlotAspect
-    hold on
     % Pull square region in center of embryo
     MeanRho = mean(RhoTimeSeries,3);
     MeanActin =mean(ActinTimeSeries,3);
@@ -84,6 +79,16 @@ for iF=4%2:length(theFolders)
     Info.Name = Name;
     Info.TimeInt= TimeInt;
     Info.IsSD=SD;
+    hold on
+    plot(Info.SaveCols(1)*ones(1,200),Info.SaveRows,':k')
+    plot(Info.SaveCols(end)*ones(1,200),Info.SaveRows,':k')
+    plot(Info.SaveCols,Info.SaveRows(1)*ones(1,200),':k')
+    plot(Info.SaveCols,Info.SaveRows(end)*ones(1,200),':k')
+    nexttile
+    imagesc(FiltRho(:,:,1))
+    % FiltEm=FiltRho;
+    % PlotAspect
+    hold on
     plot(Info.SaveCols(1)*ones(1,200),Info.SaveRows,':k')
     plot(Info.SaveCols(end)*ones(1,200),Info.SaveRows,':k')
     plot(Info.SaveCols,Info.SaveRows(1)*ones(1,200),':k')

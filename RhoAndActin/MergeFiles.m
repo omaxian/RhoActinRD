@@ -50,7 +50,7 @@ if (iType>1)
     elseif (iType==4)
         ActinEr = 4*(EveryMeanActin/0.3-1).^2.*(EveryMeanActin>0.3); 
     end
-    TEr(:,iType) = TEr(:,iType) + ActinEr;
+    %TEr(:,iType) = TEr(:,iType) + ActinEr;
 end
 [vv,inds]=sort(TEr(:,iType),'descend');
 inds=inds(end-50:end);
