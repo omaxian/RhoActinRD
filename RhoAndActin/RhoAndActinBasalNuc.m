@@ -39,7 +39,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     ForceFactor=0.4/gw;
     nFilSt = ceil(500/MaxLength);
     ActinUpdate=1;
-    saveEvery=floor(1e-6+1/dt);
+    saveEvery=floor(1e-6+0.5/dt);
     
     L=20;
     Nx=L/gw*1/2; % The grid spacing 
@@ -57,6 +57,8 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     nSave = floor(tf/(saveEvery*dt)+1e-10);
     AllRho=zeros(Nx,Nx,nSave)+min(StSt);
     AllActin=zeros(Nx,Nx,nSave);
+    AllRhoHat=zeros(Nx,Nx,nSave);
+    AllActinHat=zeros(Nx,Nx,nSave);
 
     if (MakeMovie)
         close all;
@@ -149,6 +151,8 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         if (mod(iT-1,saveEvery)==0)
             AllRho(:,:,(iT-1)/saveEvery+1)=u;
             AllActin(:,:,(iT-1)/saveEvery+1)=fg;
+            AllRhoHat(:,:,(iT-1)/saveEvery+1)=fft2(u);
+            AllActinHat(:,:,(iT-1)/saveEvery+1)=fft2(fg);
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
             kymopt=Nx/4;
@@ -161,6 +165,8 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     BurnIn=40;
     AllActin=AllActin(:,:,BurnIn+1:end);
     AllRho=AllRho(:,:,BurnIn+1:end);
+    AllActinHat=AllActin(:,:,BurnIn+1:end);
+    AllRhoHat=AllRho(:,:,BurnIn+1:end);
     xCoords=xCoords(BurnIn+1:end);
     if (size(StSt)>1)
         Thres=StSt(2);
@@ -181,12 +187,44 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     end
     [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
         AllRho,AllActin,0);
-    Statistics.XCor=XCorsSim/max(abs(XCorsSim(:)));
-    Statistics.rSim=rSim;
-    Statistics.tSim=tSim;
+    XCorsSim=XCorsSim/max(abs(XCorsSim(:)));
+    ResampledT = -120:2:120;
+    ResampledX = 0:0.5:10;
+    InterpolatedSim=ResampleXCor(XCorsSim,tSim,rSim,...
+             ResampledX,ResampledT,11,121);
+    nFour = 10;
+    AllActinHat=AllActinHat(1:nFour,1:nFour,:);
+    AllRhoHat=AllRhoHat(1:nFour,1:nFour,:);
+    % Save magnitude and autocorrelation of Fourier modes
+    MeanActinHat = mean(abs(AllActinHat),3);
+    MeanRhoHat = mean(abs(AllRhoHat),3);
+    % Compute autocorrelations at times 0.5, 2, 5, and 10
+    TimeAcor=[0.5 2 5 10];
+    Lags = TimeAcor/(saveEvery*dt);
+    ACorsRho = zeros(nFour,nFour,length(Lags));
+    ACorsAct = zeros(nFour,nFour,length(Lags));
+    for j=1:nFour
+        for k=1:nFour
+            tser = reshape(abs(AllRhoHat(j,k,:)),[],1);
+            aCors = autocorr(tser,NumLags=max(Lags));
+            tserA = reshape(abs(AllActinHat(j,k,:)),[],1);
+            aCorsA = autocorr(tserA,NumLags=max(Lags));
+            for iL=1:length(Lags)
+                ACorsRho(j,k,:)=aCors(Lags+1);
+                ACorsAct(j,k,:)=aCorsA(Lags+1);
+            end
+        end
+    end
+    Statistics.XCor=InterpolatedSim;
+    Statistics.rSim=ResampledX;
+    Statistics.tSim=ResampledT;
     Statistics.ExSizes=ExSizes;
-    Statistics.NumExcitations=NumExcitations;
     Statistics.MeanActin=mean(AllActin(:));
+    Statistics.MeanRhoHat = MeanRhoHat(:);
+    Statistics.MeanActinHat = MeanActinHat(:);
+    Statistics.ACorsRho = ACorsRho(:);
+    Statistics.ACorsAct = ACorsAct(:);
+    Statistics.TimeACor = TimeAcor;
     if (0)
         % Snapshots
         [~,nPlot]=size(PlotUs);
