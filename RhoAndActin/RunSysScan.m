@@ -2,7 +2,7 @@
 function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath('Inputs/')
-nSamp = 1000;
+nSamp = 200;
 nSeed = 10;
 nParams = 8;
 numNonZero = 2;
@@ -15,7 +15,7 @@ for iSamp=1:nSamp
         rng("shuffle")
     end
     xr=rand(5,1);
-    Params = [0.45+xr(1)*0.8; 0.4; xr(2)*40; 1; 1; ...
+    Params = [0.5+(xr(1)< 0.5)*0.2; 0.4; xr(2)*40; 1; 1; ...
         xr(3)*10; xr(4)*0.3; xr(5)*3];
     AllParameters(:,iSamp)=Params;
     nNzs=zeros(nSeed,1);
@@ -45,6 +45,7 @@ for iSamp=1:nSamp
             AvgStats.XCor = AvgStats.XCor+AllStats{iP}.XCor;
             AvgStats.MeanActin = AvgStats.MeanActin+AllStats{iP}.MeanActin;
             AvgStats.ExSizes = [AvgStats.ExSizes; AllStats{iP}.ExSizes];
+            AvgStats.NumStims =  AvgStats.NumStims+AllStats{iP}.NumStims;
         end
         AvgStats.MeanRhoHat = AvgStats.MeanRhoHat/nNzTot;
         AvgStats.MeanActinHat = AvgStats.MeanActinHat/nNzTot;
@@ -52,6 +53,7 @@ for iSamp=1:nSamp
         AvgStats.ACorsAct = AvgStats.ACorsAct/nNzTot;
         AvgStats.XCor = AvgStats.XCor/nNzTot;
         AvgStats.MeanActin = AvgStats.MeanActin/nNzTot;
+        AvgStats.NumStims = AvgStats.NumStims/nNzTot;
     end
     AllAveragedStats{iSamp}=AvgStats;
 end

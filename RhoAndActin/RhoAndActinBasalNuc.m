@@ -24,7 +24,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     dt = 0.25; % Stability limit is 1
     tf = 241;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [40];
+    tsaves = [];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -40,6 +40,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     nFilSt = ceil(500/MaxLength);
     ActinUpdate=1;
     saveEvery=floor(1e-6+0.5/dt);
+    TotalLifetime = MaxLength/GrowRate+MaxLength/ShrinkRate+FullLifetime;
     
     L=20;
     Nx=L/gw*1/2; % The grid spacing 
@@ -59,6 +60,8 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     AllActin=zeros(Nx,Nx,nSave);
     AllRhoHat=zeros(Nx,Nx,nSave);
     AllActinHat=zeros(Nx,Nx,nSave);
+    LastStim=0;
+    NumStims=0;
 
     if (MakeMovie)
         close all;
@@ -101,10 +104,20 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             end
         end
         % Break out of simulations that aren't doing anything
-        if (max(u(:)) < 1.05*min(StSt) && min(StSt) < 0.5)
-            Statistics.XCor=0;
-            Statistics.MeanActin=0;
-            return;
+        if (length(StSt)>1 && max(u(:)) < StSt(2) && t-LastStim > TotalLifetime)
+            % Stimulate
+            LastStim = t;
+            Rstim = 4;
+            ctrstim = rand(1,2)*L;
+            xd=xg-ctrstim(1);
+            xd(xd < -L/2)=xd(xd < -L/2)+L;
+            xd(xd>L/2)=xd(xd>L/2)-L;
+            yd=yg-ctrstim(2);
+            yd(yd < -L/2)=yd(yd < -L/2)+L;
+            yd(yd>L/2)=yd(yd>L/2)-L;
+            rt = sqrt(xd.^2+yd.^2);
+            u(rt < Rstim) = max(StSt);
+            NumStims=NumStims+1;
         end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*fg).*u;
         RHSHat = fft2(u/dt+RHS);
@@ -162,12 +175,12 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
-    BurnIn=40;
-    AllActin=AllActin(:,:,BurnIn+1:end);
-    AllRho=AllRho(:,:,BurnIn+1:end);
-    AllActinHat=AllActin(:,:,BurnIn+1:end);
-    AllRhoHat=AllRho(:,:,BurnIn+1:end);
-    xCoords=xCoords(BurnIn+1:end);
+    BurnIn=40/(dt*saveEvery);
+    AllActin=AllActin(:,:,BurnIn+1:end-1);
+    AllRho=AllRho(:,:,BurnIn+1:end-1);
+    AllActinHat=AllActinHat(:,:,BurnIn+1:end-1);
+    AllRhoHat=AllRhoHat(:,:,BurnIn+1:end-1);
+    xCoords=xCoords(BurnIn+1:end-1);
     if (size(StSt)>1)
         Thres=StSt(2);
     else
@@ -225,10 +238,11 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.ACorsRho = ACorsRho(:);
     Statistics.ACorsAct = ACorsAct(:);
     Statistics.TimeACor = TimeAcor;
-    if (0)
+    Statistics.NumStims=NumStims;
+    if (doPlot)
         % Snapshots
-        [~,nPlot]=size(PlotUs);
-        tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+        %[~,nPlot]=size(PlotUs);
+        %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:length(tsaves)
             figure(iT+1)
             nexttile
@@ -257,20 +271,21 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             yticklabels('')
         end
         % Kymograph
-        figure(4)
         nexttile
-        RhoT=reshape(AllRho(kymopt,:,:),Nx,tf-BurnIn)';
-        imagesc((0:Nx-1)*dx,0:tf-BurnIn-1,RhoT)
+        RhoT=reshape(AllRho(kymopt,:,:),Nx,[])';
+        tsaves = ((BurnIn+1)*saveEvery*dt:saveEvery*dt:tf)-40;
+        imagesc((0:Nx-1)*dx,tsaves,RhoT)
         colormap sky
         hold on
-        for j=1:tf-BurnIn
+        for j=1:length(tsaves)
             xpl=xCoords{j};
-            scatter(xpl,(j-1)*ones(length(xpl),1),2,'s', ...
+            scatter(xpl,tsaves(j)*ones(length(xpl),1),2,'s', ...
                     'MarkerFaceColor',[0.87    0.49    0],...
                     'MarkerEdgeColor','None',...
                     'MarkerFaceAlpha',0.04)
         end
         xlabel('$x$ ($\mu$m)')
+        clim([0 ICScale])
         %xticklabels('')
         pbaspect([1 1.25 1])
         %yticklabels('')
