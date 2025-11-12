@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=doPlot;
+    MakeMovie=0;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -273,7 +273,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         % Kymograph
         nexttile
         RhoT=reshape(AllRho(kymopt,:,:),Nx,[])';
-        tsaves = ((BurnIn+1)*saveEvery*dt:saveEvery*dt:tf)-40;
+        tsaves = (0:saveEvery*dt:tf-(BurnIn+2)*saveEvery*dt);
         imagesc((0:Nx-1)*dx,tsaves,RhoT)
         colormap sky
         hold on

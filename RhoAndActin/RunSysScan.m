@@ -15,8 +15,14 @@ for iSamp=1:nSamp
         rng("shuffle")
     end
     xr=rand(5,1);
-    Params = [0.5+(xr(1)< 0.5)*0.2; 0.4; xr(2)*40; 1; 1; ...
-        xr(3)*10; xr(4)*0.3; xr(5)*3];
+    Params = [0.5+(xr(1)< 0.5)*0.2; 0.4; 1+xr(2)*39; 1; 1; ...
+        0.1+xr(3)*9.9; xr(4)*20; xr(5)*100];
+    
+    MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
+    NucRate_B = Params(7)/(MonomerClock*Params(6));
+    NucRate_Rho = Params(8)/(MonomerClock*Params(6));
+    Params(7)=NucRate_B;
+    Params(8)=NucRate_Rho;
     AllParameters(:,iSamp)=Params;
     nNzs=zeros(nSeed,1);
     for seed=1:nSeed
