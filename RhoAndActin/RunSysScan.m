@@ -5,7 +5,7 @@ addpath('Inputs/')
 nSamp = 200;
 nSeed = 10;
 nParams = 8;
-numNonZero = 2;
+numNonZero = 1;
 AllParameters=zeros(nParams,nSamp);
 AllnNzs = zeros(nSamp,1);
 rng(str2num(RandomSeed));
@@ -15,9 +15,8 @@ for iSamp=1:nSamp
         rng("shuffle")
     end
     xr=rand(5,1);
-    Params = [0.5+(xr(1)< 0.5)*0.2; 0.4; 1+xr(2)*39; 1; 1; ...
-        0.1+xr(3)*9.9; xr(4)*20; xr(5)*100];
-    
+    Params = [0.5+(iSamp<=nSamp/2)*0.2; 0.4; 1+xr(2)*39; 1; 1; ...
+        0.1+xr(3)*9.9; xr(4)*10; xr(5)*50];
     MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
     NucRate_B = Params(7)/(MonomerClock*Params(6));
     NucRate_Rho = Params(8)/(MonomerClock*Params(6));
@@ -51,7 +50,6 @@ for iSamp=1:nSamp
             AvgStats.XCor = AvgStats.XCor+AllStats{iP}.XCor;
             AvgStats.MeanActin = AvgStats.MeanActin+AllStats{iP}.MeanActin;
             AvgStats.ExSizes = [AvgStats.ExSizes; AllStats{iP}.ExSizes];
-            AvgStats.NumStims =  AvgStats.NumStims+AllStats{iP}.NumStims;
         end
         AvgStats.MeanRhoHat = AvgStats.MeanRhoHat/nNzTot;
         AvgStats.MeanActinHat = AvgStats.MeanActinHat/nNzTot;
@@ -59,7 +57,6 @@ for iSamp=1:nSamp
         AvgStats.ACorsAct = AvgStats.ACorsAct/nNzTot;
         AvgStats.XCor = AvgStats.XCor/nNzTot;
         AvgStats.MeanActin = AvgStats.MeanActin/nNzTot;
-        AvgStats.NumStims = AvgStats.NumStims/nNzTot;
     end
     AllAveragedStats{iSamp}=AvgStats;
 end

@@ -37,7 +37,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     ICScale = StSt(end); 
     gw=ds;
     ForceFactor=0.4/gw;
-    nFilSt = ceil(500/MaxLength);
+    nFilSt = 0;
     ActinUpdate=1;
     saveEvery=floor(1e-6+0.5/dt);
     TotalLifetime = MaxLength/GrowRate+MaxLength/ShrinkRate+FullLifetime;
@@ -62,6 +62,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     AllActinHat=zeros(Nx,Nx,nSave);
     LastStim=0;
     NumStims=0;
+    koffz=koff0;
 
     if (MakeMovie)
         close all;
@@ -103,23 +104,26 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
                 fg=fg+fgDiff;
             end
         end
-        % Break out of simulations that aren't doing anything
-        if (length(StSt)>1 && max(u(:)) < StSt(2) && t-LastStim > TotalLifetime)
-            % Stimulate
-            LastStim = t;
-            Rstim = 4;
-            ctrstim = rand(1,2)*L;
-            xd=xg-ctrstim(1);
-            xd(xd < -L/2)=xd(xd < -L/2)+L;
-            xd(xd>L/2)=xd(xd>L/2)-L;
-            yd=yg-ctrstim(2);
-            yd(yd < -L/2)=yd(yd < -L/2)+L;
-            yd(yd>L/2)=yd(yd>L/2)-L;
-            rt = sqrt(xd.^2+yd.^2);
-            u(rt < Rstim) = max(StSt);
-            NumStims=NumStims+1;
+        % Add some randomness into the basal rate to prevent things from
+        % going dead. This models molecular randomness in the Rho dynamics
+        if (t-LastStim > FullLifetime && length(StSt)>1)
+            koffz = koff0*ones(Nx);
+            LastStim=t;
+            % Identify holes in the mesh
+            BinaryActin = fg<0.5;
+            CC = bwconncomp(BinaryActin);
+            L2=CC2periodic(CC,[1 1],'L');
+            Elig = 1:max(L2(:));
+            % Excite 25% of the regions
+            if (~isempty(Elig))
+            ExciteMe = rand(length(Elig),1)<0.25;
+            Regions=Elig(ExciteMe);
+            for j=Regions
+                koffz(L2==j)=0.4;
+            end
+            end
         end
-        RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*fg).*u;
+        RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*fg).*u;
         RHSHat = fft2(u/dt+RHS);
         uHatNew = RHSHat./(DivFacFourier);
         uNew = ifft2(uHatNew);
@@ -190,7 +194,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     [~,~,nFr]=size(RhoThres);
     NumExcitations=zeros(nFr,1);
     ExSizes=[];
-    for iT=1:nFr
+    for iT=nFr-100/(dt*saveEvery):nFr
         CC = bwconncomp(RhoThres(:,:,iT));
         L2=CC2periodic(CC,[1 1],'L');
         NumExcitations(iT)=max(L2(:));
