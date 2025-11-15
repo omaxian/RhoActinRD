@@ -34,7 +34,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     GrowAmt = (GrowRate/ds*dt);% (#mon per time step - first number is um/s)
     ShrinkAmt = (ShrinkRate/ds*dt); % (#mon per time step - first number is um/s)
     MaxLength = max(ds,floor(Params(6)/ds)*ds);
-    ICScale = StSt(1); 
+    ICScale = StSt(end); 
     gw=ds;
     ForceFactor=0.4/gw;
     nFilSt = 0;
@@ -109,34 +109,46 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             koffz = koff0*ones(Nx);
             LastStim=t;
             MaxStimPxls=floor(10/dx^2);
+            % Choose a centroid at random and include all pixels
+            % within a radius around it
+            ctrstim=rand(1,2)*L;
+            xd=xg-ctrstim(1);
+            xd(xd < -L/2)=xd(xd < -L/2)+L;
+            xd(xd>L/2)=xd(xd>L/2)-L;
+            yd=yg-ctrstim(2);
+            yd(yd < -L/2)=yd(yd < -L/2)+L;
+            yd(yd>L/2)=yd(yd>L/2)-L;
+            rt = sqrt(xd.^2+yd.^2);
+            Elig = rt < sqrt(MaxStimPxls)*dx;
+            koffz(Elig) = 0.4;
             % Identify holes in the mesh
-            ActinHole = fg<0.5;
-            CC = bwconncomp(ActinHole);
-            L2=CC2periodic(CC,[1 1],'L'); 
-            Elig=1:max(L2(:));
-            % Excite 25% of the regions
-            ExciteMe = rand(length(Elig),1)<0.25;
-            Regions=Elig(ExciteMe);
-            for j=Regions
-                [BinRow,BinCol]=find(L2==j);
-                xy = ([BinCol BinRow]-1)*dx;
-                if (length(BinRow)>MaxStimPxls)
-                    % Choose a centroid at random and include all pixels
-                    % within a radius around it
-                    ctrstim=xy(floor(rand*length(BinRow)),:);
-                    xd=xg-ctrstim(1);
-                    xd(xd < -L/2)=xd(xd < -L/2)+L;
-                    xd(xd>L/2)=xd(xd>L/2)-L;
-                    yd=yg-ctrstim(2);
-                    yd(yd < -L/2)=yd(yd < -L/2)+L;
-                    yd(yd>L/2)=yd(yd>L/2)-L;
-                    rt = sqrt(xd.^2+yd.^2);
-                    Elig = rt < sqrt(MaxStimPxls)*dx & ActinHole;
-                    koffz(Elig) = 0.4;
-                else
-                    koffz(L2==j)=0.4;
-                end
-            end
+            % ActinHole = fg<0.5;
+            % CC = bwconncomp(ActinHole);
+            % L2=CC2periodic(CC,[1 1],'L'); 
+            % Elig=1:max(L2(:));
+            % % Excite 25% of the regions
+            % ExciteMe = rand(length(Elig),1)<0.25;
+            % Regions=Elig(ExciteMe);
+            % for j=Regions
+            %     [BinRow,BinCol]=find(L2==j);
+            %     xy = ([BinCol BinRow]-1)*dx;
+            %     if (length(BinRow)>MaxStimPxls)
+            %         % Choose a centroid at random and include all pixels
+            %         % within a radius around it
+            %         ctrstim=xy(ceil(rand*length(BinRow)),:);
+            %         xd=xg-ctrstim(1);
+            %         xd(xd < -L/2)=xd(xd < -L/2)+L;
+            %         xd(xd>L/2)=xd(xd>L/2)-L;
+            %         yd=yg-ctrstim(2);
+            %         yd(yd < -L/2)=yd(yd < -L/2)+L;
+            %         yd(yd>L/2)=yd(yd>L/2)-L;
+            %         rt = sqrt(xd.^2+yd.^2);
+            %         Elig = rt < sqrt(MaxStimPxls)*dx & ActinHole;
+            %         koffz(Elig) = 0.4;
+            %     else
+            %         koffz(L2==j)=0.4;
+            %     end
+            % end
         end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*fg).*u;
         RHSHat = fft2(u/dt+RHS);
