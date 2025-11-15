@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=0;
+    MakeMovie=doPlot;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -34,7 +34,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     GrowAmt = (GrowRate/ds*dt);% (#mon per time step - first number is um/s)
     ShrinkAmt = (ShrinkRate/ds*dt); % (#mon per time step - first number is um/s)
     MaxLength = max(ds,floor(Params(6)/ds)*ds);
-    ICScale = StSt(end); 
+    ICScale = StSt(1); 
     gw=ds;
     ForceFactor=0.4/gw;
     nFilSt = 0;
@@ -61,7 +61,6 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     AllRhoHat=zeros(Nx,Nx,nSave);
     AllActinHat=zeros(Nx,Nx,nSave);
     LastStim=0;
-    NumStims=0;
     koffz=koff0;
 
     if (MakeMovie)
@@ -109,18 +108,34 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         if (t-LastStim > FullLifetime && length(StSt)>1)
             koffz = koff0*ones(Nx);
             LastStim=t;
+            MaxStimPxls=floor(10/dx^2);
             % Identify holes in the mesh
-            BinaryActin = fg<0.5;
-            CC = bwconncomp(BinaryActin);
-            L2=CC2periodic(CC,[1 1],'L');
-            Elig = 1:max(L2(:));
+            ActinHole = fg<0.5;
+            CC = bwconncomp(ActinHole);
+            L2=CC2periodic(CC,[1 1],'L'); 
+            Elig=1:max(L2(:));
             % Excite 25% of the regions
-            if (~isempty(Elig))
             ExciteMe = rand(length(Elig),1)<0.25;
             Regions=Elig(ExciteMe);
             for j=Regions
-                koffz(L2==j)=0.4;
-            end
+                [BinRow,BinCol]=find(L2==j);
+                xy = ([BinCol BinRow]-1)*dx;
+                if (length(BinRow)>MaxStimPxls)
+                    % Choose a centroid at random and include all pixels
+                    % within a radius around it
+                    ctrstim=xy(floor(rand*length(BinRow)),:);
+                    xd=xg-ctrstim(1);
+                    xd(xd < -L/2)=xd(xd < -L/2)+L;
+                    xd(xd>L/2)=xd(xd>L/2)-L;
+                    yd=yg-ctrstim(2);
+                    yd(yd < -L/2)=yd(yd < -L/2)+L;
+                    yd(yd>L/2)=yd(yd>L/2)-L;
+                    rt = sqrt(xd.^2+yd.^2);
+                    Elig = rt < sqrt(MaxStimPxls)*dx & ActinHole;
+                    koffz(Elig) = 0.4;
+                else
+                    koffz(L2==j)=0.4;
+                end
             end
         end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*fg).*u;
@@ -242,7 +257,6 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.ACorsRho = ACorsRho(:);
     Statistics.ACorsAct = ACorsAct(:);
     Statistics.TimeACor = TimeAcor;
-    Statistics.NumStims=NumStims;
     if (doPlot)
         % Snapshots
         %[~,nPlot]=size(PlotUs);
