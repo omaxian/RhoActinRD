@@ -1,7 +1,7 @@
 % For parameter scanning
 function []=RunSysScan(RandomSeed)
 % Bounds for params
-addpath('Inputs/')
+addpath(genpath('.'))
 nSamp = 200;
 nSeed = 10;
 nParams = 8;
@@ -15,7 +15,7 @@ for iSamp=1:nSamp
         rng("shuffle")
     end
     xr=rand(5,1);
-    Params = [0.5+(iSamp<=nSamp/2)*0.2; 0.4; 1+xr(2)*39; 1; 1; ...
+    Params = [0.7; 0.4; 1+xr(2)*39; 1; 1; ...
         0.1+xr(3)*9.9; xr(4)*7; xr(5)*50];
     MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
     NucRate_B = Params(7)/(MonomerClock*Params(6));
@@ -25,7 +25,7 @@ for iSamp=1:nSamp
     AllParameters(:,iSamp)=Params;
     nNzs=zeros(nSeed,1);
     for seed=1:nSeed
-        AllStats{seed}=RhoAndActinBasalNuc(Params,seed,1);
+        AllStats{seed}=RhoAndActinBasalNuc(Params,seed,0);
         if (AllStats{seed}.XCor(1)~=0)
             nNzs(seed)=1;
         else

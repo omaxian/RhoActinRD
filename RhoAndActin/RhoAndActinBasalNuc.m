@@ -22,7 +22,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Nuc0=Params(7);
     NucEn=Params(8)/max(StSt)^2;
     dt = 0.25; % Stability limit is 1
-    tf = 241;
+    tf = 541;
     Du=0.1; % The size of the waves depends on Du
     tsaves = [];
     % Parameters for the actin
@@ -34,7 +34,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     GrowAmt = (GrowRate/ds*dt);% (#mon per time step - first number is um/s)
     ShrinkAmt = (ShrinkRate/ds*dt); % (#mon per time step - first number is um/s)
     MaxLength = max(ds,floor(Params(6)/ds)*ds);
-    ICScale = StSt(end); 
+    ICScale = StSt(1); 
     gw=ds;
     ForceFactor=0.4/gw;
     nFilSt = 0;
