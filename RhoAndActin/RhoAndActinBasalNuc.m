@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=doPlot;
+    MakeMovie=0;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -22,7 +22,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Nuc0=Params(7);
     NucEn=Params(8)/max(StSt)^2;
     dt = 0.25; % Stability limit is 1
-    tf = 541;
+    tf = 1041;
     Du=0.1; % The size of the waves depends on Du
     tsaves = [];
     % Parameters for the actin
@@ -39,7 +39,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     ForceFactor=0.4/gw;
     nFilSt = 0;
     ActinUpdate=1;
-    saveEvery=floor(1e-6+0.5/dt);
+    saveEvery=floor(1e-6+1/dt);
     TotalLifetime = MaxLength/GrowRate+MaxLength/ShrinkRate+FullLifetime;
     
     L=20;
@@ -243,7 +243,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     MeanActinHat = mean(abs(AllActinHat),3);
     MeanRhoHat = mean(abs(AllRhoHat),3);
     % Compute autocorrelations at times 0.5, 2, 5, and 10
-    TimeAcor=[0.5 2 5 10];
+    TimeAcor=max([0.5 2 4 6 12],saveEvery*dt);
     Lags = TimeAcor/(saveEvery*dt);
     ACorsRho = zeros(nFour,nFour,length(Lags));
     ACorsAct = zeros(nFour,nFour,length(Lags));
@@ -315,7 +315,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
                     'MarkerFaceAlpha',0.04)
         end
         xlabel('$x$ ($\mu$m)')
-        clim([0 ICScale])
+        clim([min(RhoT(:)) max(RhoT(:))])
         %xticklabels('')
         pbaspect([1 1.25 1])
         %yticklabels('')
