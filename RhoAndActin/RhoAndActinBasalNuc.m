@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=0;
+    MakeMovie=doPlot;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -22,7 +22,11 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Nuc0=Params(7);
     NucEn=Params(8)/max(StSt)^2;
     dt = 0.25; % Stability limit is 1
-    tf = 1041;
+    if (length(StSt)>1)
+        tf = 1041;
+    else
+        tf = 241;
+    end
     Du=0.1; % The size of the waves depends on Du
     tsaves = [];
     % Parameters for the actin
