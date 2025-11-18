@@ -211,11 +211,14 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         MaxRho=reshape(max(max(AllRho,[],1),[],2),size(AllRho,3),1);
         BurnIn=find(MaxRho>Thres,1,'first');
         BurnOut = find(MaxRho>Thres,1,'last');
-        if isempty(BurnIn)
+        EnoughExcitation=1;
+        if isempty(BurnIn) || (BurnOut - BurnIn < 120/(dt*saveEvery))
             BurnIn=40/(dt*saveEvery);
             BurnOut=size(AllRho,3)-1;
+            EnoughExcitation=0;
         end
     else
+        EnoughExcitation=1;
         Thres=0.5*StSt;
         BurnIn=40/(dt*saveEvery);
         BurnOut=size(AllRho,3)-1;
@@ -254,8 +257,6 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     TimeAcor=max([0.5 2 4 6 12],saveEvery*dt);
     Lags = TimeAcor/(saveEvery*dt);
     % Remove autocorrelations larger than the number of frames
-    TimeAcor(Lags>size(AllActinHat,3)-1)=[];
-    Lags(Lags>size(AllActinHat,3)-1)=[];
     ACorsRho = zeros(nFour,nFour,length(Lags));
     ACorsAct = zeros(nFour,nFour,length(Lags));
     for j=1:nFour
@@ -280,6 +281,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.ACorsRho = ACorsRho(:);
     Statistics.ACorsAct = ACorsAct(:);
     Statistics.TimeACor = TimeAcor;
+    Statistics.EnoughExcitation = EnoughExcitation;
     if (doPlot)
         % Snapshots
         %[~,nPlot]=size(PlotUs);
