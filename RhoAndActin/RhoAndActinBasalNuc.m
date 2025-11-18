@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=doPlot;
+    MakeMovie=0;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -229,7 +229,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     [~,~,nFr]=size(Thres);
     NumExcitations=zeros(nFr,1);
     ExSizes=[];
-    for iT=nFr-100/(dt*saveEvery):nFr
+    for iT=max(nFr-100/(dt*saveEvery),1):nFr
         CC = bwconncomp(Thres(:,:,iT));
         L2=CC2periodic(CC,[1 1],'L');
         NumExcitations(iT)=max(L2(:));
@@ -253,6 +253,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Compute autocorrelations at times 0.5, 2, 5, and 10
     TimeAcor=max([0.5 2 4 6 12],saveEvery*dt);
     Lags = TimeAcor/(saveEvery*dt);
+    % Remove autocorrelations larger than the number of frames
+    TimeAcor(Lags>size(AllActinHat,3)-1)=[];
+    Lags(Lags>size(AllActinHat,3)-1)=[];
     ACorsRho = zeros(nFour,nFour,length(Lags));
     ACorsAct = zeros(nFour,nFour,length(Lags));
     for j=1:nFour

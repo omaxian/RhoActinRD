@@ -2,7 +2,7 @@
 function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath(genpath('.'))
-nSamp = 200;
+nSamp = 50;
 nSeed = 10;
 nParams = 8;
 numNonZero = 1;
