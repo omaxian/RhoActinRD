@@ -206,23 +206,28 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
-    BurnIn=40/(dt*saveEvery);
+    if (length(StSt)>1)
+        Thres = 0.5*(StSt(2)+StSt(3));
+        MaxRho=reshape(max(max(AllRho,[],1),[],2),size(AllRho,3),1);
+        BurnIn=find(MaxRho>Thres,1,'first');
+        if isempty(BurnIn)
+            BurnIn=40/(dt*saveEvery);
+        end
+    else
+        Thres=0.5*StSt;
+        BurnIn=40/(dt*saveEvery);
+    end
     AllActin=AllActin(:,:,BurnIn+1:end-1);
     AllRho=AllRho(:,:,BurnIn+1:end-1);
     AllActinHat=AllActinHat(:,:,BurnIn+1:end-1);
     AllRhoHat=AllRhoHat(:,:,BurnIn+1:end-1);
     xCoords=xCoords(BurnIn+1:end-1);
-    if (size(StSt)>1)
-        Thres=StSt(2);
-    else
-        Thres=0.5;
-    end
-    RhoThres=AllRho>Thres;
-    [~,~,nFr]=size(RhoThres);
+    Thres=AllRho>Thres;
+    [~,~,nFr]=size(Thres);
     NumExcitations=zeros(nFr,1);
     ExSizes=[];
     for iT=nFr-100/(dt*saveEvery):nFr
-        CC = bwconncomp(RhoThres(:,:,iT));
+        CC = bwconncomp(Thres(:,:,iT));
         L2=CC2periodic(CC,[1 1],'L');
         NumExcitations(iT)=max(L2(:));
         for iJ=1:max(L2(:))

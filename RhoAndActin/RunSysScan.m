@@ -15,7 +15,7 @@ for iSamp=1:nSamp
         rng("shuffle")
     end
     xr=rand(5,1);
-    Params = [0.5; 0.4; 1+xr(2)*39; 1; 1; ...
+    Params = [0.7; 0.4; 1+xr(2)*39; 1; 1; ...
         0.1+xr(3)*9.9; xr(4)*7; xr(5)*50];
     MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
     NucRate_B = Params(7)/(MonomerClock*Params(6));
@@ -60,5 +60,5 @@ for iSamp=1:nSamp
     end
     AllAveragedStats{iSamp}=AvgStats;
 end
-save(strcat('ScanFullDataAuto_',num2str(RandomSeed),'.mat'),'AllAveragedStats',...
+save(strcat('ScanFullData_',num2str(RandomSeed),'.mat'),'AllAveragedStats',...
     'AllParameters','AllnNzs')
