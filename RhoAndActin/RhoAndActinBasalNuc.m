@@ -210,18 +210,21 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         Thres = 0.5*(StSt(2)+StSt(3));
         MaxRho=reshape(max(max(AllRho,[],1),[],2),size(AllRho,3),1);
         BurnIn=find(MaxRho>Thres,1,'first');
+        BurnOut = find(MaxRho>Thres,1,'last');
         if isempty(BurnIn)
             BurnIn=40/(dt*saveEvery);
+            BurnOut=size(AllRho,3)-1;
         end
     else
         Thres=0.5*StSt;
         BurnIn=40/(dt*saveEvery);
+        BurnOut=size(AllRho,3)-1;
     end
-    AllActin=AllActin(:,:,BurnIn+1:end-1);
-    AllRho=AllRho(:,:,BurnIn+1:end-1);
-    AllActinHat=AllActinHat(:,:,BurnIn+1:end-1);
-    AllRhoHat=AllRhoHat(:,:,BurnIn+1:end-1);
-    xCoords=xCoords(BurnIn+1:end-1);
+    AllActin=AllActin(:,:,BurnIn+1:BurnOut);
+    AllRho=AllRho(:,:,BurnIn+1:BurnOut);
+    AllActinHat=AllActinHat(:,:,BurnIn+1:BurnOut);
+    AllRhoHat=AllRhoHat(:,:,BurnIn+1:BurnOut);
+    xCoords=xCoords(BurnIn+1:BurnOut);
     Thres=AllRho>Thres;
     [~,~,nFr]=size(Thres);
     NumExcitations=zeros(nFr,1);
