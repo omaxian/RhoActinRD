@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=0;
+    MakeMovie=doPlot;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -19,10 +19,16 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Net=OnRate-OffRate;
     SgnChg=find((Net(1:end-1).*Net(2:end))<0);
     StSt=p(SgnChg);
+    if (length(StSt)>1)
+        Thres = 0.5*(StSt(2)+StSt(3));
+    else
+        Thres = 0.5*StSt;
+    end
+    kThres = 0.55;
     Nuc0=Params(7);
     NucEn=Params(8)/max(StSt)^2;
     dt = 0.25; % Stability limit is 1
-    tf = 1041;
+    tf = 541;
     Du=0.1; % The size of the waves depends on Du
     tsaves = [];
     % Parameters for the actin
@@ -60,7 +66,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     AllActin=zeros(Nx,Nx,nSave);
     AllRhoHat=zeros(Nx,Nx,nSave);
     AllActinHat=zeros(Nx,Nx,nSave);
-    LastStim=0;
+    Stimulated=zeros(nSave,1);
     koffz=koff0;
 
     if (MakeMovie)
@@ -105,50 +111,53 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         end
         % Add some randomness into the basal rate to prevent things from
         % going dead. This models molecular randomness in the Rho dynamics
-        if (t-LastStim > FullLifetime && length(StSt)>1)
-            koffz = koff0*ones(Nx);
-            LastStim=t;
-            MaxStimPxls=floor(10/dx^2);
-            % Choose a centroid at random and include all pixels
-            % within a radius around it
-            ctrstim=rand(1,2)*L;
-            xd=xg-ctrstim(1);
-            xd(xd < -L/2)=xd(xd < -L/2)+L;
-            xd(xd>L/2)=xd(xd>L/2)-L;
-            yd=yg-ctrstim(2);
-            yd(yd < -L/2)=yd(yd < -L/2)+L;
-            yd(yd>L/2)=yd(yd>L/2)-L;
-            rt = sqrt(xd.^2+yd.^2);
-            Elig = rt < sqrt(MaxStimPxls)*dx;
-            koffz(Elig) = 0.4;
-            % Identify holes in the mesh
-            % ActinHole = fg<0.5;
-            % CC = bwconncomp(ActinHole);
-            % L2=CC2periodic(CC,[1 1],'L'); 
-            % Elig=1:max(L2(:));
-            % % Excite 25% of the regions
-            % ExciteMe = rand(length(Elig),1)<0.25;
-            % Regions=Elig(ExciteMe);
-            % for j=Regions
-            %     [BinRow,BinCol]=find(L2==j);
-            %     xy = ([BinCol BinRow]-1)*dx;
-            %     if (length(BinRow)>MaxStimPxls)
-            %         % Choose a centroid at random and include all pixels
-            %         % within a radius around it
-            %         ctrstim=xy(ceil(rand*length(BinRow)),:);
-            %         xd=xg-ctrstim(1);
-            %         xd(xd < -L/2)=xd(xd < -L/2)+L;
-            %         xd(xd>L/2)=xd(xd>L/2)-L;
-            %         yd=yg-ctrstim(2);
-            %         yd(yd < -L/2)=yd(yd < -L/2)+L;
-            %         yd(yd>L/2)=yd(yd>L/2)-L;
-            %         rt = sqrt(xd.^2+yd.^2);
-            %         Elig = rt < sqrt(MaxStimPxls)*dx & ActinHole;
-            %         koffz(Elig) = 0.4;
-            %     else
-            %         koffz(L2==j)=0.4;
-            %     end
-            % end
+        if (length(StSt)>1)
+            if (max(u(:)) > Thres)
+                koffz=koff0*ones(Nx);
+            elseif (min(koffz(:))>kThres)
+                koffz = 0.4*ones(Nx);
+                % MaxStimPxls=floor(10/dx^2);
+                % % Choose a centroid at random and include all pixels
+                % % within a radius around it
+                % ctrstim=[L/2 L/2];%rand(1,2)*L;
+                % xd=xg-ctrstim(1);
+                % xd(xd < -L/2)=xd(xd < -L/2)+L;
+                % xd(xd>L/2)=xd(xd>L/2)-L;
+                % yd=yg-ctrstim(2);
+                % yd(yd < -L/2)=yd(yd < -L/2)+L;
+                % yd(yd>L/2)=yd(yd>L/2)-L;
+                % rt = sqrt(xd.^2+yd.^2);
+                % Elig = rt < sqrt(MaxStimPxls)*dx;
+                % koffz(Elig) = 0.4;
+                % Identify holes in the mesh
+                % ActinHole = fg<0.5;
+                % CC = bwconncomp(ActinHole);
+                % L2=CC2periodic(CC,[1 1],'L'); 
+                % Elig=1:max(L2(:));
+                % % Excite 25% of the regions
+                % ExciteMe = rand(length(Elig),1)<0.25;
+                % Regions=Elig(ExciteMe);
+                % for j=Regions
+                %     [BinRow,BinCol]=find(L2==j);
+                %     xy = ([BinCol BinRow]-1)*dx;
+                %     if (length(BinRow)>MaxStimPxls)
+                %         % Choose a centroid at random and include all pixels
+                %         % within a radius around it
+                %         ctrstim=xy(ceil(rand*length(BinRow)),:);
+                %         xd=xg-ctrstim(1);
+                %         xd(xd < -L/2)=xd(xd < -L/2)+L;
+                %         xd(xd>L/2)=xd(xd>L/2)-L;
+                %         yd=yg-ctrstim(2);
+                %         yd(yd < -L/2)=yd(yd < -L/2)+L;
+                %         yd(yd>L/2)=yd(yd>L/2)-L;
+                %         rt = sqrt(xd.^2+yd.^2);
+                %         Elig = rt < sqrt(MaxStimPxls)*dx & ActinHole;
+                %         koffz(Elig) = 0.4;
+                %     else
+                %         koffz(L2==j)=0.4;
+                %     end
+                % end
+            end
         end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*fg).*u;
         RHSHat = fft2(u/dt+RHS);
@@ -197,6 +206,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             AllActin(:,:,(iT-1)/saveEvery+1)=fg;
             AllRhoHat(:,:,(iT-1)/saveEvery+1)=fft2(u);
             AllActinHat(:,:,(iT-1)/saveEvery+1)=fft2(fg);
+            Stimulated((iT-1)/saveEvery+1)=min(koffz(:))<kThres;
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
             kymopt=Nx/4;
@@ -207,27 +217,31 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
     if (length(StSt)>1)
-        Thres = 0.5*(StSt(2)+StSt(3));
-        MaxRho=reshape(max(max(AllRho,[],1),[],2),size(AllRho,3),1);
-        BurnIn=find(MaxRho>Thres,1,'first');
-        BurnOut = find(MaxRho>Thres,1,'last');
-        EnoughExcitation=1;
-        if isempty(BurnIn) || (BurnOut - BurnIn < 120/(dt*saveEvery))
-            BurnIn=40/(dt*saveEvery);
-            BurnOut=size(AllRho,3)-1;
+        % Find the longest continuous interval where there was no
+        % stimulation
+        CCStim=bwconncomp(~Stimulated);
+        p = regionprops(CCStim, 'Area'); 
+        longest = 0;
+        if (~isempty(p))
+            [longest,ind] = max([p.Area]); % Find the maximum area
+            IncludeMe = CCStim.PixelIdxList{ind};
+        end
+        if (longest<120/(dt*saveEvery))
+            IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
             EnoughExcitation=0;
+        else
+            EnoughExcitation=1;
         end
     else
+        longest = 0;
         EnoughExcitation=1;
-        Thres=0.5*StSt;
-        BurnIn=40/(dt*saveEvery);
-        BurnOut=size(AllRho,3)-1;
+        IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
     end
-    AllActin=AllActin(:,:,BurnIn+1:BurnOut);
-    AllRho=AllRho(:,:,BurnIn+1:BurnOut);
-    AllActinHat=AllActinHat(:,:,BurnIn+1:BurnOut);
-    AllRhoHat=AllRhoHat(:,:,BurnIn+1:BurnOut);
-    xCoords=xCoords(BurnIn+1:BurnOut);
+    AllActin=AllActin(:,:,IncludeMe);
+    AllRho=AllRho(:,:,IncludeMe);
+    AllActinHat=AllActinHat(:,:,IncludeMe);
+    AllRhoHat=AllRhoHat(:,:,IncludeMe);
+    xCoords=xCoords(IncludeMe);
     Thres=AllRho>Thres;
     [~,~,nFr]=size(Thres);
     NumExcitations=zeros(nFr,1);
@@ -242,11 +256,12 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     end
     [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
         AllRho,AllActin,0);
-    XCorsSim=XCorsSim/max(abs(XCorsSim(:)));
+    %XCorsSim=XCorsSim/max(abs(XCorsSim(:)));
     ResampledT = -120:2:120;
     ResampledX = 0:0.5:10;
     InterpolatedSim=ResampleXCor(XCorsSim,tSim,rSim,...
              ResampledX,ResampledT,11,121);
+    InterpolatedSim=InterpolatedSim/max(abs(InterpolatedSim(:)));
     nFour = 10;
     AllActinHat=AllActinHat(1:nFour,1:nFour,:);
     AllRhoHat=AllRhoHat(1:nFour,1:nFour,:);
@@ -282,6 +297,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.ACorsAct = ACorsAct(:);
     Statistics.TimeACor = TimeAcor;
     Statistics.EnoughExcitation = EnoughExcitation;
+    Statistics.LongestNoStim = longest*dt*saveEvery;
     if (doPlot)
         % Snapshots
         %[~,nPlot]=size(PlotUs);
@@ -294,7 +310,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             clim([min(AllRho(:)) max(AllRho(:))])
             %clim([0 3])
             set(gca,'YDir','Normal')
-            colormap(sky)
+            colormap(gca,sky)
             hold on
             pbaspect([1 1 1])
             if (~isempty(Xf))
@@ -314,9 +330,9 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             yticklabels('')
         end
         % Kymograph
-        nexttile
+        %nexttile
         RhoT=reshape(AllRho(kymopt,:,:),Nx,[])';
-        tsaves = (0:saveEvery*dt:tf-(BurnIn+2)*saveEvery*dt);
+        tsaves = (0:saveEvery*dt:(length(IncludeMe)-1)*saveEvery*dt);
         imagesc((0:Nx-1)*dx,tsaves,RhoT)
         colormap sky
         hold on
