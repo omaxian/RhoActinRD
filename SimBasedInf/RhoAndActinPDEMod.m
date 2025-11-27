@@ -18,16 +18,27 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
     Nx=100; 
     % Solve for the steady states 
     [rts,~,~,~] = PDERoots(Params(1:9),Du,L,Nx);
-    if (isscalar(rts(:,1)))
-        ICRange = [0 2*rts(:,1); 0*rts(:,2) 2*rts(:,2)];
+    StSt=rts(:,1);
+    if (isscalar(StSt))
+        Thres = 0.5*StSt(1);
     else 
-        ICRange = [min(rts(:,1)) max(rts(:,1)); ...
-            min(rts(:,2)) max(rts(:,2))];
+        Thres = 0.5*(StSt(2,1)+StSt(3,1));
+    end
+    kThres = 0.5;
+    % Set the new k so that there is a single st st
+    kLo=0.5;
+    pChk=Params;
+    StStLo=StSt;
+    while (length(StStLo)>1)
+        kLo=kLo-0.1;
+        pChk(1)=kLo;
+        [rtsChk,~,~,~] = PDERoots(pChk,Du,L,Nx);
+        StStLo=rtsChk(:,1);
     end
     
     %dt = 0.1; % Stability limit is 1
-    tf = max(240,12/koffAct);
-    saveEvery=1;%floor(1e-6+1/dt);
+    tf = 540;
+    saveEvery=floor(1e-6+1/dt);
     ChangeEverySteps = ceil(ChangeEvery/dt);
     Nreg1D = round(L/sqrt(SquareRegionSize));
     Regions = RegularMatrixPartition(Nreg1D,L,Nx);
@@ -35,8 +46,9 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
     % Initialize grid
     dx=L/Nx;
     % Set up IC
-    u = ICRange(1,1)+(ICRange(1,2)-ICRange(1,1))*rand(Nx);
-    v = ICRange(2,1)+(ICRange(2,2)-ICRange(2,1))*rand(Nx);
+    u = rts(1,1)*ones(Nx);
+    v = rts(1,2)*ones(Nx);
+    koffz=koff0;
     
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
@@ -49,6 +61,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
     AllActin=zeros(Nx,Nx,nSave);
     AllRhoHat=zeros(Nx,Nx,nSave);
     AllActinHat=zeros(Nx,Nx,nSave);
+    Stimulated=zeros(nSave,1);
 
     if (MakeMovie)
         close all;
@@ -74,7 +87,14 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
             Nuc0s=Nuc0*ones(Nx);
             NucEns=NucEn*ones(Nx);
         end
-        RHS_u = (kbasal+kfb*u.^3./(KFB+u.^3))-(koff0+rf*v).*u;
+        if (length(StSt)>1)
+            if (max(u(:)) > Thres)
+                koffz=koff0;
+            elseif (min(koffz(:))>kThres)
+                koffz = kLo;
+            end
+        end
+        RHS_u = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*v).*u;
         RHS_v = (Nuc0s+NucEns.*u.^2) - koffAct*v;
         RHSHat_u = fft2(u/dt+RHS_u);
         uHatNew = RHSHat_u./DivFacFourier_u;
@@ -96,7 +116,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
             ax1=nexttile;
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
-            clim(ICRange(1,:))
+            clim([0 max(rts(:,1))])
             colormap(ax1,sky);
             title(sprintf('Rho; $t= %1.1f$',iT*dt))
             pbaspect([1 1 1])
@@ -111,7 +131,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
             C1=[0.95 0.9 0.9];
             Cmap=C1+(0:100)'/100.*(C2-C1);
             colormap(ax2,Cmap)
-            clim(ICRange(2,:))
+            clim([0 max(rts(:,2))])
             colorbar
             title(sprintf('F-actin; $t= %1.1f$',iT*dt))
             xlabel("$x$ ($\mu$m)")
@@ -122,24 +142,44 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
             AllActin(:,:,(iT-1)/saveEvery+1)=v;
             AllRhoHat(:,:,(iT-1)/saveEvery+1)=fft2(u);
             AllActinHat(:,:,(iT-1)/saveEvery+1)=fft2(v);
+            Stimulated((iT-1)/saveEvery+1)=min(koffz(:))<kThres;
         end
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
     if (postproc)
-        BurnIn=max(2/koffAct,40);
-        StartInd=ceil(BurnIn/(saveEvery*dt));
+        if (length(StSt)>1)
+            % Find the longest continuous interval where there was no
+            % stimulation
+            CCStim=bwconncomp(~Stimulated);
+            p = regionprops(CCStim, 'Area'); 
+            longest = 0;
+            if (~isempty(p))
+                [longest,ind] = max([p.Area]); % Find the maximum area
+                IncludeMe = CCStim.PixelIdxList{ind};
+            end
+            if (longest<120/(dt*saveEvery))
+                IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
+                EnoughExcitation=0;
+            else
+                EnoughExcitation=1;
+            end
+        else
+            longest = 0;
+            EnoughExcitation=1;
+            IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
+        end
         % Remove initial transients
-        AllActin=AllActin(:,:,StartInd:end);
-        AllRho=AllRho(:,:,StartInd:end);
+        AllActin=AllActin(:,:,IncludeMe);
+        AllRho=AllRho(:,:,IncludeMe);
         nFour=10;
-        AllActinHat=AllActinHat(1:nFour,1:nFour,StartInd:end);
-        AllRhoHat=AllRhoHat(1:nFour,1:nFour,StartInd:end);
+        AllActinHat=AllActinHat(1:nFour,1:nFour,IncludeMe);
+        AllRhoHat=AllRhoHat(1:nFour,1:nFour,IncludeMe);
         % Save magnitude and autocorrelation of Fourier modes
         MeanActinHat = mean(abs(AllActinHat),3);
         MeanRhoHat = mean(abs(AllRhoHat),3);
         % Compute autocorrelations at times 0.5, 2, 5, and 10
-        TimeAcor=[0.5 2 5 10];
+        TimeAcor=max([0.5 2 4 6 12],saveEvery*dt);
         Lags = TimeAcor/(saveEvery*dt);
         ACorsRho = zeros(nFour,nFour,length(Lags));
         ACorsAct = zeros(nFour,nFour,length(Lags));
@@ -155,45 +195,10 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
                 end
             end
         end
-        Statistics.MeanRhoHat = MeanRhoHat(:);
-        Statistics.MeanActinHat = MeanActinHat(:);
-        Statistics.ACorsRho = ACorsRho(:);
-        Statistics.ACorsAct = ACorsAct(:);
-        Statistics.TimeACor = TimeAcor;
-
-        % xEv = 1/dx;
-        % tEv = 2/(saveEvery*dt);
-        % Excitation sizes
-        % if (length(rts(:,1))>1)
-        %     Thres=rts(2,1);
-        % else
-        %     Thres=mean(AllRho(:));
-        % end
-        % RhoThres=AllRho>Thres;
-        % [~,~,nFr]=size(RhoThres);
-        % NumExcitations=zeros(nFr,1);
-        % ExSizes=[];
-        % for iT=1:nFr
-        %     CC = bwconncomp(RhoThres(:,:,iT));
-        %     L2=CC2periodic(CC,[1 1],'L');
-        %     NumExcitations(iT)=max(L2(:));
-        %     for iJ=1:max(L2(:))
-        %         ExSizes=[ExSizes;sum(L2(:)==iJ)/(Nx^2)*L^2];
-        %     end
-        % end
-        % Statistics.ExSizes=ExSizes;
-        % Statistics.NumExcitations=NumExcitations;
-
-        % Statistics.RhoSnap = AllRho(1:xEv:end,1:xEv:end,end);
-        % Statistics.ActSnap = AllActin(1:xEv:end,1:xEv:end,end);
-        % Statistics.RhoKymo=reshape(AllRho(Nx/2,:,:),Nx,size(AllRho,3))';
-        % Statistics.RhoKymo=Statistics.RhoKymo(1:xEv:end,1:tEv:end);
-        % Statistics.ActKymo=reshape(AllActin(Nx/2,:,:),Nx,size(AllActin,3))';
-        % Statistics.ActKymo=Statistics.ActKymo(1:xEv:end,1:tEv:end);
-
+        
         % Check if the Rho concentration is always below/above the saddle pt
         nT = size(AllRho,3);
-        Thres=rts(2,1);
+        Thres=StSt(2);
         AboveByTime = reshape(sum(sum(AllRho>Thres,1),2),nT,1);
         AboveByTime = AboveByTime/Nx^2;
         [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
@@ -206,12 +211,19 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
         Statistics.XCor=InterpolatedSim;
         Statistics.rSim=ResampledX;
         Statistics.tSim=ResampledT;
-
         Statistics.PctAboveSaddle = AboveByTime;
+        Statistics.MeanRhoHat = MeanRhoHat(:);
+        Statistics.MeanActinHat = MeanActinHat(:);
+        Statistics.ACorsRho = ACorsRho(:);
+        Statistics.ACorsAct = ACorsAct(:);
+        Statistics.TimeACor = TimeAcor;
+        Statistics.EnoughExcitation=EnoughExcitation;
+        Statistics.LongestNoStim = longest*dt*saveEvery;
     else
         Statistics=[];
     end
     if (pltkymo)
+        figure;
         KymoPlot
     end
 end
