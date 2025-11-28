@@ -22,7 +22,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
     if (isscalar(StSt))
         Thres = 0.5*StSt(1);
     else 
-        Thres = 0.5*(StSt(2,1)+StSt(3,1));
+        Thres = StSt(3,1);
     end
     kThres = 0.5;
     % Set the new k so that there is a single st st
@@ -90,7 +90,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
         if (length(StSt)>1)
             if (max(u(:)) > Thres)
                 koffz=koff0;
-            elseif (min(koffz(:))>kThres)
+            elseif (max(u(:)) < Thres && min(koffz(:))>kThres)
                 koffz = kLo;
             end
         end
