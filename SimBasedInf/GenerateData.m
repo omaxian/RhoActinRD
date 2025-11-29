@@ -16,7 +16,7 @@ for iSamp=1:nSamp
     p=PBounds(:,1)+(PBounds(:,2)-PBounds(:,1)).*rand(3,1);
     Nreg1D = round(20/p(3));
     Areg = 400/Nreg1D^2;
-    Params(iSamp,:)=[0.68 0.35 0.3*p(1) 4*p(1) 1*p(1) p(2) 0.05 1 0.1 Areg];
+    Params(iSamp,:)=[0.55 0.35 0.3*p(1) 4*p(1) 1*p(1) p(2) 0.05 1 0.1 Areg];
     Stats=RhoAndActinPDEMod(Params(iSamp,:),0.1,1,1,(RandomSeed-1)*nSamp+iSamp,0);
     AllStats{iSamp}=Stats;
     rng("shuffle")
