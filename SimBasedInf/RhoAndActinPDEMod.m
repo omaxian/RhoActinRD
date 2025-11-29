@@ -90,7 +90,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
         if (length(StSt)>1)
             if (max(u(:)) > Thres)
                 koffz=koff0;
-            elseif (max(u(:)) < Thres && min(koffz(:))>kThres)
+            elseif (min(koffz(:))>kThres)
                 koffz = kLo;
             end
         end
@@ -111,7 +111,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
 	        Statistics.MeanActin=0;
             return;
         end
-        if (mod(iT,50)==0 && MakeMovie)
+        if (mod(iT,200)==0 && MakeMovie)
             tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
             ax1=nexttile;
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
@@ -223,7 +223,9 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
         Statistics=[];
     end
     if (pltkymo)
-        figure;
+        if (MakeMovie)
+            close(f)
+        end
         KymoPlot
     end
 end
