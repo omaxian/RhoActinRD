@@ -16,7 +16,7 @@ for iSamp=1:nSamp
     c=0;
     while (~c)
     p=PBounds(:,1)+(PBounds(:,2)-PBounds(:,1)).*rand(5,1);
-    Nreg1D = round(20/p(3));
+    Nreg1D = round(20/p(5));
     Areg = 400/Nreg1D^2;
     Params(iSamp,:)=[0.68 0.35 p(1) p(2) p(3) p(4) 0.05 1 0.1 Areg];
     [rts,~,~,~] = PDERoots(Params(iSamp,1:9),0,0,0);
