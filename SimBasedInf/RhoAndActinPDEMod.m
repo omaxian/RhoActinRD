@@ -111,7 +111,7 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
 	        Statistics.MeanActin=0;
             return;
         end
-        if (mod(iT,50)==0 && MakeMovie)
+        if (mod(iT,200)==0 && MakeMovie)
             tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
             ax1=nexttile;
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
@@ -223,7 +223,9 @@ function [Statistics,st] = RhoAndActinPDEMod(Params,dt,postproc,RandomNuc,...
         Statistics=[];
     end
     if (pltkymo)
-        figure;
+        if (MakeMovie)
+            close(f)
+        end
         KymoPlot
     end
 end
