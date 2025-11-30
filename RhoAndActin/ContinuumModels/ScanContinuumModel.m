@@ -10,10 +10,10 @@ rng(RandomSeed);
 nSamp = 250;
 nP=10;
 Params = zeros(nSamp,nP);
-PBounds = [0.01 0.5; 0 0.5; 0.5 7];
+PBounds = [0.01 0.5; 0 0.5; 0.5 10];
 for iSamp=1:nSamp
     iSamp
-    p=PBounds(:,1)+(PBounds(:,2)-PBounds(:,1)).*rand(5,1);
+    p=PBounds(:,1)+(PBounds(:,2)-PBounds(:,1)).*rand(3,1);
     Nreg1D = round(20/p(3));
     Areg = 400/Nreg1D^2;
     Params(iSamp,:)=[0.68 0.35 0.3*p(1) 4*p(1) 1*p(1) p(2) 0.05 1 0.1 Areg];

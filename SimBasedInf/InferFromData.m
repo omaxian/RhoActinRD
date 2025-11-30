@@ -1,74 +1,12 @@
-%% Generate fake data and compare against parameter sets
-% How many of the parameter sets are just sitting in the steady state?
-% Remove parameter sets that are doing nothing
-% % 
-if (0)
-AllAVG=[];
-AllP=[];
-AllNNZ=[];
-for j=1:200
-    try
-load(strcat('ScanUStim_',num2str(j),'.mat'));
-AllNNZ=[AllNNZ; AllnNzs];
-AllP=[AllP AllParameters];
-AllAVG=[AllAVG AllAveragedStats];
-    catch
-    end
-end
-[~,inds]=unique(AllP','rows');
-AllAveragedStats=AllAVG(inds);
-AllParameters=AllP(:,inds);
-save('UniformResults/ScanUStim',...
-    'AllAveragedStats','AllParameters','-v7.3')
-return
-end
-% Try to identify the minima again
-%Generate some data for testing
-Auto=0;
-if (1)
-if (Auto)
-    ParamsTest = [0.5 0.4 26.8 1 1 2 0.035 0.73];
-else
-    ParamsTest = [0.7 0.4 26.9 1 1 0.817 0.055 0.65]; % starfish
-    %ParamsTest = [0.7 0.4 4.9 1 1 1.6 0.202 1.072];
-end
-ParamsTest=AddParams(ParamsTest);
-figure(1);
-tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
-nexttile
-StatsTrue= RhoAndActinBasalNuc(ParamsTest,1,1);
-title('True')
-TestMeanRhoHat = StatsTrue.MeanRhoHat(:);
-TestMeanActHat = StatsTrue.MeanActinHat(:);
-TestACorsRho = StatsTrue.ACorsRho(:);
-TestACorsAct  = StatsTrue.ACorsAct(:);
-TestXCors =StatsTrue.XCor(:);
-end
-% 
-if (0)
-% Plot the true difference in the Xcors
-nSampOG=size(AllParams,1);
-LikelihoodToEvidence = zeros(nSampOG,nData);
-for jChk=1:nData
-    for iSamp=1:nSampOG
-        LikelihoodToEvidence(iSamp,jChk)=...
-            10.^(-norm(AllXCors(:,iSamp)-TestXCors(:,jChk)));
-    end
-end
-nToChk = 5000;
-p = randperm(nSampOG,nToChk);
-figure
-ScatterPlotParams(LikelihoodToEvidence(p,:),AllParams(p,:),...
-    ParamsTest);
-end
-
-
-% Using the trained classifier
+FwdModel = @(p) RhoAndActinBasalNuc(p,1,0);
+FwdModelPlot = @(p) RhoAndActinBasalNuc(p,1,1);
+% Real data using the trained classifier
 ParInds=[3 6 10 11];
+Auto=0;
 if (Auto)
 else
 load('TC_XCor0_UStimInducHyb.mat')
-load('TC_Four_wInducHyb.mat')
+%load('TC_Four_wInducHyb.mat')
 load('TC_uStimInducSustain.mat')
 end
 nParCheck=5000;
@@ -89,18 +27,19 @@ for iP=1:nParCheck
     end
     ParamsScan(iP,:)=Params;
 end
-% Use classifier to evaluate likelihood to evidence
-Df = [TestMeanRhoHat(gInds)./TestMeanRhoHat(1); ...
-    TestMeanActHat(gInds)./TestMeanActHat(1); ...
-    TestACorsRho(cInds); ...
-    TestACorsAct(cInds)];
-InputVec = [Df'.*ones(nParCheck,1) ParamsScan(:,ParInds)];
-%InputVec = [TestXCors(xInds,:)'.*ones(nParCheck,1) ParamsScan(:,ParInds)];
+% Df = [DataMeanRhoHat(gInds)./DataMeanRhoHat(1); ...
+%        DataMeanActHat(gInds)./DataMeanActHat(1); ...
+%        DataRhoACor(cInds-200); DataActACor(cInds-200)];
+InputVec = [DataXCor(xInds)'.*ones(nParCheck,1) ParamsScan(:,ParInds).*ones(1,length(ParInds))];
+%InputVec = [Df'.*ones(nParCheck,1) ParamsScan(:,ParInds).*ones(1,length(ParInds))];
 [yfit,scores] = trainedClassifier.predictFcn(InputVec); 
-% [yy,sc] = trainedClassifier.predictFcn(...
-%     [TestXCors(xInds,:)' ParamsTest(ParInds)])
 LikelihoodToEvidence = scores(:,2)./(1-scores(:,2));
 [vals,inds]=sort(LikelihoodToEvidence,'ascend');
+
+ParamsTest = AddParams([0.7 0.4 26.9 1 1 0.817 0.055 0.65; ...% starfish
+    0.7 0.4 4.9 1 1 1.6 0.202 1.072]); % worms
+IVec = [DataXCor(xInds)'.*ones(2,1) ParamsTest(:,ParInds).*ones(2,length(ParInds))];
+[yy,sc] = trainedClassifier.predictFcn(IVec)
 
 % Statistics for ranked percentiles
 BestSustains=0;
@@ -108,12 +47,12 @@ k=-1;
 while (~BestSustains)
     k=k+1;
     BestInd=inds(end-k);
-    StatsBest = RhoAndActinBasalNuc(ParamsScan(BestInd,:),1,0);
+    StatsBest = FwdModel(ParamsScan(BestInd,:));
     BestSustains=StatsBest.EnoughExcitation;
 end
 % Visualize max likelihood trajectory
-nexttile
-StatsBest = RhoAndActinBasalNuc(ParamsScan(BestInd,:),1,1);
+figure
+StatsBest = FwdModelPlot(ParamsScan(BestInd,:));
 title('Most likely')
 
 % 90th prctile
@@ -122,7 +61,7 @@ k=-1;
 while (~NinetySustains)
     k=k+1;
     NinetyInd=inds(end-nParCheck/10-k);
-    StatsNinety = RhoAndActinBasalNuc(ParamsScan(NinetyInd,:),1,0);
+    StatsNinety = FwdModel(ParamsScan(NinetyInd,:));
     NinetySustains=StatsNinety.EnoughExcitation;
 end
 
@@ -132,35 +71,31 @@ k=-1;
 while (~SFSustains)
     k=k+1;
     SevFInd=inds(end-nParCheck/4-k);
-    StatsSF = RhoAndActinBasalNuc(ParamsScan(SevFInd,:),1,0);
+    StatsSF = FwdModel(ParamsScan(SevFInd,:));
     SFSustains=StatsSF.EnoughExcitation;
 end
-
-
 
 %Plot clusters in parameter space 
 figure(2);
 tiledlayout(4,2,'Padding', 'none', 'TileSpacing', 'compact');
-ParamsTest=AddParams(ParamsTest);
 Tilex = [6 10];
 Tiley = [3 11];
 xLabels = ["$\ell$" "$f_b$"];
 yLabels = ["$T_\textrm{fil}$" "$f_\rho$"];
-Cutoff = max(log10(LikelihoodToEvidence))-10;
+MaxLikelihoodToEvidence=max(log10(LikelihoodToEvidence(LikelihoodToEvidence<inf)));
+Cutoff = MaxLikelihoodToEvidence-10;
 Goodinds = inds(log10(LikelihoodToEvidence(inds))>Cutoff);
 for iTile=1:2
 nexttile
 scatter(ParamsScan(Goodinds,Tilex(iTile)),ParamsScan(Goodinds,Tiley(iTile)),10,...
     log10(LikelihoodToEvidence(Goodinds)),'filled')
 hold on
-scatter(ParamsTest(Tilex(iTile)),ParamsTest(Tiley(iTile)),...
-    100,'ks','filled')
 scatter(ParamsScan(BestInd,Tilex(iTile)),ParamsScan(BestInd,Tiley(iTile)),...
     100,'m^','filled')
 ylabel(yLabels(iTile))
 xlabel(xLabels(iTile))
 colormap jet
-clim([Cutoff max(log10(LikelihoodToEvidence))])
+clim([Cutoff MaxLikelihoodToEvidence])
 pbaspect([1 1 1])
 end
 colorbar
@@ -168,10 +103,10 @@ colorbar
 % Statistics
 nM=10;
 gInds=(1:nM)+(0:10:(nM-1)*10)';
-cInds=gInds(1:10)+200;
+cInds=201:210;
 gInds=gInds(2:10);
 nexttile
-plot(1:nM-1,StatsTrue.MeanRhoHat(gInds(:))./StatsTrue.MeanRhoHat(1),'-k')
+plot(1:nM-1,DataMeanRhoHat(gInds(:))./DataMeanRhoHat(1),'-k')
 hold on
 plot(1:nM-1,StatsBest.MeanRhoHat(gInds(:))./StatsBest.MeanRhoHat(1),'Color',[0 0.44 0.89 1])
 plot(1:nM-1,StatsNinety.MeanRhoHat(gInds(:))./StatsNinety.MeanRhoHat(1),'Color',[0 0.44 0.89 0.5])
@@ -180,7 +115,7 @@ pbaspect([1 1 1])
 xlabel('$m$')
 ylabel('$<|\hat \rho(m,0)|>$')
 nexttile
-plot(1:nM-1,StatsTrue.MeanActinHat(gInds(:))./StatsTrue.MeanActinHat(1),'-k')
+plot(1:nM-1,DataMeanActHat(gInds(:))./DataMeanActHat(1),'-k')
 hold on
 plot(1:nM-1,StatsBest.MeanActinHat(gInds(:))./StatsBest.MeanActinHat(1),'Color',[0 0.44 0.89 1])
 plot(1:nM-1,StatsNinety.MeanActinHat(gInds(:))./StatsNinety.MeanActinHat(1),'Color',[0 0.44 0.89 0.5])
@@ -189,7 +124,7 @@ xlabel('$m$')
 ylabel('$<|\hat f(m,0)|>$')
 pbaspect([1 1 1])
 nexttile
-plot(0:nM-1,StatsTrue.ACorsRho(cInds(:)),'-k')
+plot(0:nM-1,DataRhoACor(cInds(:)-200),'-k')
 hold on
 plot(0:nM-1,StatsBest.ACorsRho(cInds(:)),'Color',[0 0.44 0.89 1])
 plot(0:nM-1,StatsNinety.ACorsRho(cInds(:)),'Color',[0 0.44 0.89 0.5])
@@ -198,7 +133,7 @@ xlabel('$m$')
 ylabel('acor($|\hat \rho|,\Delta t = 4$)')
 pbaspect([1 1 1])
 nexttile
-plot(0:nM-1,StatsTrue.ACorsAct(cInds(:)),'-k')
+plot(0:nM-1,DataActACor(cInds(:)-200),'-k')
 hold on
 plot(0:nM-1,StatsBest.ACorsAct(cInds(:)),'Color',[0 0.44 0.89 1])
 plot(0:nM-1,StatsNinety.ACorsAct(cInds(:)),'Color',[0 0.44 0.89 0.5])
@@ -211,8 +146,8 @@ ResampledT = -120:2:120;
 ResampledX = 0:0.5:10;
 [X,T]=meshgrid(ResampledX,ResampledT);
 X0Inds=find(X==0);
-T0Inds=find(T==0);
-plot(T(X0Inds),StatsTrue.XCor(X0Inds),'-k')
+T0Inds=find(T==-10);
+plot(T(X0Inds),DataXCor(X0Inds),'-k')
 hold on
 plot(T(X0Inds),StatsBest.XCor(X0Inds),'Color',[0 0.44 0.89 1])
 plot(T(X0Inds),StatsNinety.XCor(X0Inds),'Color',[0 0.44 0.89 0.5])
@@ -221,7 +156,7 @@ xlabel('$\Delta t$')
 ylabel('$R_{\rho f}(0,\Delta t)$')
 pbaspect([1 1 1])
 nexttile
-plot(X(T0Inds),StatsTrue.XCor(T0Inds),'-k')
+plot(X(T0Inds),DataXCor(T0Inds),'-k')
 hold on
 plot(X(T0Inds),StatsBest.XCor(T0Inds),'Color',[0 0.44 0.89 1])
 plot(X(T0Inds),StatsNinety.XCor(T0Inds),'Color',[0 0.44 0.89 0.5])

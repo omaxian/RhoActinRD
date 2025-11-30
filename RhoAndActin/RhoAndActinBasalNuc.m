@@ -6,7 +6,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     % Output is the difference in the cross correlations compared to
     % experimental data
     rng(seed);
-    MakeMovie=doPlot;
+    MakeMovie=0;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
