@@ -1,7 +1,7 @@
 function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc,...
     seed,pltkymo)
     rng(seed);
-    MakeMovie=0;
+    MakeMovie=pltkymo;
     koff0=Params(1);
     rf = Params(2);
     Nuc0=Params(3);
@@ -24,7 +24,6 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
     else 
         Thres = 0.5*(StSt(2,1)+StSt(3,1));
     end
-    kThres = 0.5;
     % Set the new k so that there is a single st st
     kLo=0.5;
     pChk=Params;
@@ -35,6 +34,7 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
         [rtsChk,~,~,~] = PDERoots(pChk,Du,L,Nx);
         StStLo=rtsChk(:,1);
     end
+    kThres = (koff0+kLo)/2;
     
     %dt = 0.1; % Stability limit is 1
     tf = 540;
