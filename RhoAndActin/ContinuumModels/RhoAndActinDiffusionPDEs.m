@@ -1,7 +1,7 @@
 function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc,...
     seed,pltkymo)
     rng(seed);
-    MakeMovie=pltkymo;
+    MakeMovie=0;
     koff0=Params(1);
     rf = Params(2);
     Nuc0=Params(3);
