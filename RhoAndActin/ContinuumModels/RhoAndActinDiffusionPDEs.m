@@ -19,22 +19,25 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
     % Solve for the steady states 
     [rts,~,~,~] = PDERoots(Params(1:9),Du,L,Nx);
     StSt=rts(:,1);
-    if (isscalar(StSt))
-        Thres = 0.5*StSt(1);
-    else 
-        Thres = 0.5*(StSt(2,1)+StSt(3,1));
-    end
+    p=Params;
+    p(3:4)=0.01;
+    [rts,~,~,~] = PDERoots(p,Du,L,Nx);
+    StSt_NoAct = min(rts(:,1));
+    p(3:4)=2*Params(3:4);
+    [rts,~,~,~] = PDERoots(p,Du,L,Nx);
+    StSt_DblAct = max(rts(:,1));
+    Thres = sqrt(StSt_NoAct*StSt_DblAct);
     % Set the new k so that there is a single st st
-    kLo=0.5;
-    pChk=Params;
-    StStLo=StSt;
-    while (length(StStLo)>1)
-        kLo=kLo-0.1;
-        pChk(1)=kLo;
-        [rtsChk,~,~,~] = PDERoots(pChk,Du,L,Nx);
-        StStLo=rtsChk(:,1);
-    end
-    kThres = (koff0+kLo)/2;
+    % kLo=0.5;
+    % pChk=Params;
+    % StStLo=StSt;
+    % while (length(StStLo)>1)
+    %     kLo=kLo-0.1;
+    %     pChk(1)=kLo;
+    %     [rtsChk,~,~,~] = PDERoots(pChk,Du,L,Nx);
+    %     StStLo=rtsChk(:,1);
+    % end
+    % kThres = (koff0+kLo)/2;
     
     %dt = 0.1; % Stability limit is 1
     tf = 540;
@@ -46,6 +49,7 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
     % Initialize grid
     dx=L/Nx;
     % Set up IC
+    %load('Initials.mat')
     u = rts(1,1)*ones(Nx);
     v = rts(1,2)*ones(Nx);
     koffz=koff0;
@@ -87,13 +91,13 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
             Nuc0s=Nuc0*ones(Nx);
             NucEns=NucEn*ones(Nx);
         end
-        if (length(StSt)>1)
-            if (max(u(:)) > Thres)
-                koffz=koff0;
-            elseif (min(koffz(:))>kThres)
-                koffz = kLo;
-            end
-        end
+        % if (length(StSt)>1)
+        %     if (max(u(:)) > Thres)
+        %         koffz=koff0;
+        %     elseif (min(koffz(:))>kThres)
+        %         koffz = kLo;
+        %     end
+        % end
         RHS_u = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*v).*u;
         RHS_v = (Nuc0s+NucEns.*u.^2) - koffAct*v;
         RHSHat_u = fft2(u/dt+RHS_u);
@@ -116,7 +120,7 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
             ax1=nexttile;
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
-            clim([0 max(rts(:,1))])
+            clim([StSt_DblAct Thres])
             colormap(ax1,sky);
             title(sprintf('Rho; $t= %1.1f$',iT*dt))
             pbaspect([1 1 1])
@@ -142,33 +146,15 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
             AllActin(:,:,(iT-1)/saveEvery+1)=v;
             AllRhoHat(:,:,(iT-1)/saveEvery+1)=fft2(u);
             AllActinHat(:,:,(iT-1)/saveEvery+1)=fft2(v);
-            Stimulated((iT-1)/saveEvery+1)=min(koffz(:))<kThres;
+            if (length(StSt)>1)
+            Stimulated((iT-1)/saveEvery+1)=max(u(:)) < StSt(2);
+            end
         end
     end
     % Post-process to get cross correlations and excitation sizes
     % Compute cross correlation function
     if (postproc)
-        if (length(StSt)>1)
-            % Find the longest continuous interval where there was no
-            % stimulation
-            CCStim=bwconncomp(~Stimulated);
-            p = regionprops(CCStim, 'Area'); 
-            longest = 0;
-            if (~isempty(p))
-                [longest,ind] = max([p.Area]); % Find the maximum area
-                IncludeMe = CCStim.PixelIdxList{ind};
-            end
-            if (longest<120/(dt*saveEvery))
-                IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
-                EnoughExcitation=0;
-            else
-                EnoughExcitation=1;
-            end
-        else
-            longest = 0;
-            EnoughExcitation=1;
-            IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
-        end
+        IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
         % Remove initial transients
         AllActin=AllActin(:,:,IncludeMe);
         AllRho=AllRho(:,:,IncludeMe);
@@ -198,7 +184,6 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
         
         % Check if the Rho concentration is always below/above the saddle pt
         nT = size(AllRho,3);
-        Thres=StSt(2);
         AboveByTime = reshape(sum(sum(AllRho>Thres,1),2),nT,1);
         AboveByTime = AboveByTime/Nx^2;
         [rSim,tSim,XCorsSim] = CrossCorrelations(dx,dx,dt*saveEvery,...
@@ -217,8 +202,8 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
         Statistics.ACorsRho = ACorsRho(:);
         Statistics.ACorsAct = ACorsAct(:);
         Statistics.TimeACor = TimeAcor;
-        Statistics.EnoughExcitation=EnoughExcitation;
-        Statistics.LongestNoStim = longest*dt*saveEvery;
+        Statistics.EnoughExcitation=mean(AboveByTime)>0.01 & ...
+            mean(AboveByTime)<0.5;
     else
         Statistics=[];
     end
