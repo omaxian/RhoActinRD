@@ -307,10 +307,10 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.LongestNoStim = longest*dt*saveEvery;
     if (doPlot)
         % Snapshots
-        %[~,nPlot]=size(PlotUs);
+        [~,nPlot]=size(PlotUs);
         %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:length(tsaves)
-            figure(iT+1)
+            %figure(iT+1)
             nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             %title(strcat('$t=$',num2str(PlotTs(iT))))
@@ -329,12 +329,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             % if (iT==nPlot)
             %     colorbar
             % end
-            % if (iT==1)
-            %     ylabel('$y$ ($\mu$m)')
-            % end
-            %xlabel('$x$ ($\mu$m)')
-            xticklabels('')
-            yticklabels('')
+             if (iT==1)
+                 ylabel('$y$ ($\mu$m)')
+             else
+                yticklabels('')
+             end
+            xlabel('$x$ ($\mu$m)')
+            %xticklabels('')
         end
         % Kymograph
         %nexttile

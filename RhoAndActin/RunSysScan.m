@@ -9,6 +9,11 @@ numNonZero = 1;
 AllParameters=zeros(nParams,nSamp);
 AllnNzs = zeros(nSamp,1);
 rng(str2num(RandomSeed));
+p=0:0.001:100;
+kbasal=0.05;
+kfb=1;
+KFB=0.1;
+OnRate = (kbasal+kfb*p.^3./(KFB+p.^3));
 for iSamp=1:nSamp
     iSamp
     if (iSamp>1)
@@ -17,7 +22,12 @@ for iSamp=1:nSamp
     xr=rand(5,1);
     Params = [0.7; 0.4; 1+xr(2)*39; 1; 1; ...
         0.1+xr(3)*9.9; xr(4)*8; xr(5)*100];
-    Params = [0.4+xr(1)*0.85; 2*xr(2); 31.7; 1; 1; 1.662; 0.3587; 57.7518];
+    Params = [0.4+xr(1)*0.6; 0.8*xr(2); 31.7; 1; 1; 1.662; 0.3587; 57.7518];
+    OffRate=(Params(1)*p);
+    Net=OnRate-OffRate;
+    SgnChg=find((Net(1:end-1).*Net(2:end))<0);
+    StSt=p(SgnChg);
+    Params(end)=Params(end)*StSt(end)^2/1.4550^2;
     MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
     NucRate_B = Params(7)/(MonomerClock*Params(6));
     NucRate_Rho = Params(8)/(MonomerClock*Params(6));
