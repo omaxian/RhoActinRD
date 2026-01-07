@@ -2,7 +2,7 @@
 function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath(genpath('.'))
-nSamp = 200;
+nSamp = 100;
 nSeed = 10;
 nParams = 8;
 numNonZero = 1;
@@ -17,6 +17,7 @@ for iSamp=1:nSamp
     xr=rand(5,1);
     Params = [0.7; 0.4; 1+xr(2)*39; 1; 1; ...
         0.1+xr(3)*9.9; xr(4)*8; xr(5)*100];
+    Params = [0.4+xr(1)*0.85; 2*xr(2); 31.7; 1; 1; 1.662; 0.3587; 57.7518];
     MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
     NucRate_B = Params(7)/(MonomerClock*Params(6));
     NucRate_Rho = Params(8)/(MonomerClock*Params(6));
@@ -60,5 +61,5 @@ for iSamp=1:nSamp
     end
     AllAveragedStats{iSamp}=AvgStats;
 end
-save(strcat('ScanUStim_',num2str(RandomSeed),'.mat'),'AllAveragedStats',...
+save(strcat('ScanRGA_',num2str(RandomSeed),'.mat'),'AllAveragedStats',...
     'AllParameters','AllnNzs')

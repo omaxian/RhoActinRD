@@ -176,7 +176,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             PlotXfs{index}=Xf-floor(Xf/L)*L;
             PlotTs(index)=iT*dt;
         end
-        if (mod(iT-1,40)==0 && MakeMovie)
+        if (mod(iT-1,8)==0 && MakeMovie)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
             hold on
@@ -199,6 +199,10 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             ylabel('$y$ ($\mu$m)')
             yticks(0:5:15)
             xticks(0:5:15)
+            if (min(koffz(:))<kThres)
+                set(gca,'YColor','m')
+                set(gca,'XColor','m')
+            end
             movieframes(iT)=getframe(f);
         end
         if (mod(iT-1,saveEvery)==0)
@@ -209,9 +213,12 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             Stimulated((iT-1)/saveEvery+1)=min(koffz(:))<kThres;
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
-            kymopt=Nx/4;
-            xCoords{(iT-1)/saveEvery+1}=...
+            kymopts=round((1:4)*Nx/4);
+            for iK=1:length(kymopts)
+            kymopt=kymopts(iK);
+            xCoords{(iT-1)/saveEvery+1,iK}=...
                 Xfpl(Xfpl(:,2)>(kymopt-1)*dx & Xfpl(:,2)<kymopt*dx,1);
+            end
         end
     end
     % Post-process to get cross correlations and excitation sizes
@@ -241,13 +248,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     AllRho=AllRho(:,:,IncludeMe);
     AllActinHat=AllActinHat(:,:,IncludeMe);
     AllRhoHat=AllRhoHat(:,:,IncludeMe);
-    xCoords=xCoords(IncludeMe);
-    Thres=AllRho>Thres;
-    [~,~,nFr]=size(Thres);
+    xCoords=xCoords(IncludeMe,:);
+    Thresholded=AllRho>Thres;
+    [~,~,nFr]=size(Thresholded);
     NumExcitations=zeros(nFr,1);
     ExSizes=[];
     for iT=max(nFr-100/(dt*saveEvery),1):nFr
-        CC = bwconncomp(Thres(:,:,iT));
+        CC = bwconncomp(Thresholded(:,:,iT));
         L2=CC2periodic(CC,[1 1],'L');
         NumExcitations(iT)=max(L2(:));
         for iJ=1:max(L2(:))
@@ -331,10 +338,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         end
         % Kymograph
         %nexttile
+        for iK=1:length(kymopts)
+        kymopt = kymopts(iK);
         RhoT=reshape(AllRho(kymopt,:,:),Nx,[])';
+        if (max(RhoT(:)) >Thres && min(RhoT(:)) < Thres)
         tsaves = (0:saveEvery*dt:(length(IncludeMe)-1)*saveEvery*dt);
         imagesc((0:Nx-1)*dx,tsaves,RhoT)
-        colormap sky
+        %colormap sky
         hold on
         for j=1:length(tsaves)
             xpl=xCoords{j};
@@ -343,10 +353,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
                     'MarkerEdgeColor','None',...
                     'MarkerFaceAlpha',0.04)
         end
-        xlabel('$x$ ($\mu$m)')
+        %xlabel('$x$ ($\mu$m)')
         clim([min(RhoT(:)) max(RhoT(:))])
-        %xticklabels('')
-        pbaspect([1 1.25 1])
+        xticklabels('')
+        pbaspect([1 1 1])
         %yticklabels('')
+        break
+        end
+        end
     end
 end
