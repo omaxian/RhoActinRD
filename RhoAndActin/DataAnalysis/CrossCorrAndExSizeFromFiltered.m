@@ -1,13 +1,13 @@
-% % Extract cross correlations and excitation sizes from filtered data 
-% tmax=120;
-% rmax=5;
-% Name='spd';
-% numMovies=10;
-% for MovieNum=1:numMovies
-%     AnalyzeCorrelations;
-%     clearvars -except AllExes DistsByRF dtvalsF NumExes UvalsF tmax rmax Name MovieNum numMovies
-%     save(strcat("Processed_",Name,"_",num2str(MovieNum),".mat"));
-% end
+% Extract cross correlations and excitation sizes from filtered data 
+tmax=120;
+rmax=10;
+Name='nmy-ani';
+numMovies=4;
+for MovieNum=1:numMovies
+    AnalyzeCorrelations;
+    clearvars -except AllExes DistsByRF dtvalsF NumExes UvalsF tmax rmax Name MovieNum numMovies
+    save(strcat("Processed_",Name,"_",num2str(MovieNum),".mat"));
+end
  
 % Averaging and overall distribution
 % Make all xcors the same size

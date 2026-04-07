@@ -1,6 +1,6 @@
 figure(2);
 tiledlayout(1,5,'Padding', 'none', 'TileSpacing', 'compact');
-for iDose=1
+for iDose=1:5
 rng(0);
 DataType='R';
 ParInds=[3 6 10 11];

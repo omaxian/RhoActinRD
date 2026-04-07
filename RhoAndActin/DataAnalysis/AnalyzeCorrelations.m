@@ -32,11 +32,11 @@ end
 Nx=200;
 x=(0:Nx-1)*pxlSize;
 y=(0:Nx-1)*pxlSize;
-nexttile
-imagesc(x,y,Rho(:,:,TimePlot))
-xlabel('$x$ ($\mu$m)')
-ylabel('$y$ ($\mu$m)')
-colormap turbo
+% nexttile
+% imagesc(x,y,Rho(:,:,TimePlot))
+% xlabel('$x$ ($\mu$m)')
+% ylabel('$y$ ($\mu$m)')
+% colormap turbo
 % Filter data
 %nModes=10;
 %nModesTime=10;
@@ -44,9 +44,9 @@ colormap turbo
 Filtx=smoothdata(Rho,1,'sgolay',Widths(iFw));
 Filtxy=smoothdata(Filtx,2,'sgolay',Widths(iFw));
 FiltRho=smoothdata(Filtxy,3,'sgolay',Widths(iFw));
-nexttile
-imagesc(x,y,FiltRho(:,:,TimePlot))
-xlabel('$x$ ($\mu$m)')
+% nexttile
+% imagesc(x,y,FiltRho(:,:,TimePlot))
+% xlabel('$x$ ($\mu$m)')
 % Identify pulsing regions
 Thres=mean(FiltRho(:))+Threses(iThr)*(max(FiltRho(:))-mean(FiltRho(:)));
 Excited=FiltRho>Thres;
@@ -85,9 +85,9 @@ for iT=1:nFr
     NumExes(iT)=nEx;
     AvgExSize(iT)=mean(ExSize);
 end
-nexttile
-imagesc(x,y,bwlabel(Excited(:,:,TimePlot)))
-xlabel('$x$ ($\mu$m)')% Cross correlation
+% nexttile
+% imagesc(x,y,bwlabel(Excited(:,:,TimePlot)))
+% xlabel('$x$ ($\mu$m)')% Cross correlation
 [UvalsF,dtvalsF,DistsByRF] = CrossCorrelations(pxlSize,pxlSize,FrTime,...
     FiltRho,FiltActin,1);
 DistsByRF=DistsByRF/max(DistsByRF(:));
@@ -121,7 +121,8 @@ end
 % end
 % Make a plot of the data
 %tsPl=[0:4:20];
-return
+
+if (0)
 
 figure;
 padxy=1;
@@ -233,3 +234,4 @@ colormap turbo
 % c3=circshift(ifft2(fft2(b).*conj(fft2(a))),[Ny/2 Nx/2]);
 % imagesc(x,y,c3)
 % 
+end

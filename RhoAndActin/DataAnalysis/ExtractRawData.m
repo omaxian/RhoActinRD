@@ -1,6 +1,6 @@
 % Extract a 20 x 20 um (200 pxl x 200 pxl) box in the
 % center
-NameAll='nmy-cyk';
+NameAll='nmy-ani';
 theFiles = dir(fullfile(strcat(NameAll,'/')));
 theFolders = theFiles(3:end);
 for iF=2:length(theFolders)
@@ -78,7 +78,7 @@ for iF=2:length(theFolders)
     Info.Name = Name;
     Info.TimeInt= TimeInt;
     Info.IsSD=SD;
-    %save(strcat(NameAll,'Info_',num2str(iF)),'Info');
-    %save(strcat(NameAll,'Actin_',num2str(iF)),'ActinData');
-    %save(strcat(NameAll,'Rho_',num2str(iF)),'RhoData');
+    save(strcat(NameAll,'Info_',num2str(iF-1)),'Info');
+    save(strcat(NameAll,'Actin_',num2str(iF-1)),'ActinData');
+    save(strcat(NameAll,'Rho_',num2str(iF-1)),'RhoData');
 end

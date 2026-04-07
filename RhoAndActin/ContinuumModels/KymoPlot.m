@@ -20,15 +20,19 @@
 % xticklabels('')
 % clim([min(AllActin(:)) max(AllActin(:))])
 % yticklabels('')
-ax4=nexttile;
+%ax4=nexttile;
 RhoKymo=reshape(AllRho(3*Nx/4,:,1:end),Nx,size(AllRho,3))';
 ActKymo=reshape(AllActin(3*Nx/4,:,1:end),Nx,size(AllActin,3))';
 imagesc((0:Nx-1)*dx,0:size(RhoKymo,3)-1,RhoKymo)
+try
 clim([min(min(AllRho(:)),rts(1,1)) max(max(AllRho(:)),rts(3,1))])
+catch
+clim([min(AllRho(:)) max(AllRho(:))])
+end
 xlabel('$x$ ($\mu$m)')
 ylabel('$t$ (s)')
 pbaspect([1 1 1])
-colormap(ax4,sky)
+colormap(gca,sky)
 title(strcat('$D_f =\,$',num2str(Params(6)),...
     '; $k_\textrm{diss} = \,$',num2str(Params(5))))
 % ax2=nexttile;

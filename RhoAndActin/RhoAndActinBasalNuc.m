@@ -30,7 +30,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     dt = 0.25; % Stability limit is 1
     tf = 541;
     Du=0.1; % The size of the waves depends on Du
-    tsaves = [];
+    tsaves = [300];
     % Parameters for the actin
     PoreSize=[];
     ds=0.1;
@@ -173,6 +173,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         if (sum(abs(iT*dt-tsaves)<1e-10)>0)
             index = find(abs(iT*dt-tsaves)<1e-10);
             PlotUs(:,index)=reshape(u,[],1);
+            PlotFgs(:,index)=reshape(fg,[],1);
             PlotXfs{index}=Xf-floor(Xf/L)*L;
             PlotTs(index)=iT*dt;
         end
@@ -213,7 +214,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             Stimulated((iT-1)/saveEvery+1)=min(koffz(:))<kThres;
             % Get x coordinates of all filaments in middle
             Xfpl=Xf-floor(Xf/L)*L;
-            kymopts=round((1:4)*Nx/4);
+            kymopts=[25 50 75 90 100];
             for iK=1:length(kymopts)
             kymopt=kymopts(iK);
             xCoords{(iT-1)/saveEvery+1,iK}=...
@@ -244,6 +245,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         EnoughExcitation=1;
         IncludeMe=40/(dt*saveEvery)+1:size(AllActin,3);
     end
+    ogRho = AllRho;
     AllActin=AllActin(:,:,IncludeMe);
     AllRho=AllRho(:,:,IncludeMe);
     AllActinHat=AllActinHat(:,:,IncludeMe);
@@ -306,12 +308,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.EnoughExcitation = EnoughExcitation;
     Statistics.LongestNoStim = longest*dt*saveEvery;
     if (doPlot)
+        pppp=1;
         % Snapshots
         [~,nPlot]=size(PlotUs);
-        %tiledlayout(1,nPlot,'Padding', 'none', 'TileSpacing', 'compact');
+        %tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+        %nexttile
         for iT=1:length(tsaves)
-            %figure(iT+1)
-            nexttile
+            nexttile(pppp)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             %title(strcat('$t=$',num2str(PlotTs(iT))))
             clim([min(AllRho(:)) max(AllRho(:))])
@@ -338,29 +341,45 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             %xticklabels('')
         end
         % Kymograph
-        %nexttile
-        for iK=1:length(kymopts)
+        nexttile(1+pppp)
+        for iK=2:length(kymopts)
         kymopt = kymopts(iK);
-        RhoT=reshape(AllRho(kymopt,:,:),Nx,[])';
-        if (max(RhoT(:)) >Thres && min(RhoT(:)) < Thres)
-        tsaves = (0:saveEvery*dt:(length(IncludeMe)-1)*saveEvery*dt);
+        RhoT=reshape(ogRho(kymopt,:,:),Nx,[])';
+        if (max(max(RhoT(IncludeMe,:))) >Thres && min(min(RhoT(IncludeMe,:))) < Thres)
+        tsaves = (0:(size(ogRho,3)-1))*saveEvery*dt-40;
         imagesc((0:Nx-1)*dx,tsaves,RhoT)
-        %colormap sky
+        colormap(gca,sky)
         hold on
-        for j=1:length(tsaves)
-            xpl=xCoords{j};
-            scatter(xpl,tsaves(j)*ones(length(xpl),1),2,'s', ...
-                    'MarkerFaceColor',[0.87    0.49    0],...
-                    'MarkerEdgeColor','None',...
-                    'MarkerFaceAlpha',0.04)
-        end
-        %xlabel('$x$ ($\mu$m)')
+        % Xt=[];
+        % for j=1:length(tsaves)
+        %     xpl=xCoords{j};
+        %     Xt=[Xt;tsaves(j)*ones(length(xpl),1) xpl];
+        % end
+        % scatter(Xt(:,2),Xt(:,1),2,'s', ...
+        %         'MarkerFaceColor',[0.87    0.49    0],...
+        %         'MarkerEdgeColor','None',...
+        %         'MarkerFaceAlpha',0.04)
+        StimIndex=find(Stimulated==1);
+        scatter(19.9*ones(length(StimIndex),1),tsaves(StimIndex),20,'k','filled')
+        xlabel('$x$ ($\mu$m)')
         clim([min(RhoT(:)) max(RhoT(:))])
         xticklabels('')
         pbaspect([1 1 1])
         %yticklabels('')
+        hold off
         break
         end
         end
+        nexttile(pppp)
+        plot(xlim,kymopts(iK)*dx*[1 1],':k')
+        hold off
+        nexttile(pppp+2)
+        imagesc(ResampledX,ResampledT,InterpolatedSim)
+        colormap(gca,'turbo')
+        xlabel('$\Delta r$ ($\mu$m)')
+        ylabel('$\Delta t$ (s)')
+        pbaspect([1 1 1])
+        clim([-1 1])
+        hold off
     end
 end

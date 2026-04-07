@@ -19,14 +19,16 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
     % Solve for the steady states 
     [rts,~,~,~] = PDERoots(Params(1:9),Du,L,Nx);
     StSt=rts(:,1);
+    StStAct=rts(:,2);
     p=Params;
     p(3:4)=0.01;
     [rts,~,~,~] = PDERoots(p,Du,L,Nx);
-    StSt_NoAct = min(rts(:,1));
+    StStRho_NoAct = min(rts(:,1));
     p(3:4)=2*Params(3:4);
     [rts,~,~,~] = PDERoots(p,Du,L,Nx);
-    StSt_DblAct = max(rts(:,1));
-    Thres = sqrt(StSt_NoAct*StSt_DblAct);
+    StStRho_DblAct = max(rts(:,1));
+    StStAct_DblAct= max(rts(:,2));
+    Thres = sqrt(StStRho_NoAct*StStRho_DblAct);
     % Set the new k so that there is a single st st
     % kLo=0.5;
     % pChk=Params;
@@ -68,7 +70,7 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
     Stimulated=zeros(nSave,1);
 
     if (MakeMovie)
-        close all;
+        %close all;
         f=figure('Position',[100 100 700 400]);
     end
     
@@ -115,12 +117,12 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
 	        Statistics.MeanActin=0;
             return;
         end
-        if (mod(iT,200)==0 && MakeMovie)
+        if (mod(iT,20)==0 && MakeMovie)
             tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact')
             ax1=nexttile;
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
             set(gca,'YDir','Normal')
-            clim([StSt_DblAct Thres])
+            clim([StStRho_DblAct StStRho_NoAct])
             colormap(ax1,sky);
             title(sprintf('Rho; $t= %1.1f$',iT*dt))
             pbaspect([1 1 1])
@@ -135,7 +137,7 @@ function [Statistics,st] = RhoAndActinDiffusionPDEs(Params,dt,postproc,RandomNuc
             C1=[0.95 0.9 0.9];
             Cmap=C1+(0:100)'/100.*(C2-C1);
             colormap(ax2,Cmap)
-            clim([0 max(rts(:,2))])
+            clim([0 2*max(max(StStAct),StStAct_DblAct)])
             colorbar
             title(sprintf('F-actin; $t= %1.1f$',iT*dt))
             xlabel("$x$ ($\mu$m)")
