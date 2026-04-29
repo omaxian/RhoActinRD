@@ -1,10 +1,11 @@
-% This is tma
+% This is the main file for the "forward" model of actin and RhoA
+% The inputs are parameters [koff0, rf, Tfil, nup, nud, Lmax, qb, qRho],
+% the random seed, and whether to make a figure plotting the output (still
+% shot, kymograph, and cross correlation)
+% Output is a struct with the Statistics from the simulation
+% This includes cross correlation, excitaton sizes, autocorrelations, 
+% and the longest time excitation was sustained without forcing
 function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
-    % Parameters:
-    % koff0, rf, FullLifetime, Grow, Shrink, MaxLength, Nuc0, NucEn 
-    % in that order
-    % Output is the difference in the cross correlations compared to
-    % experimental data
     rng(seed);
     MakeMovie=0;
     kbasal=0.05;
@@ -55,7 +56,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     y=(0:Nx-1)*dx;
     [xg,yg]=meshgrid(x,y);
     u = ones(Nx,Nx)*ICScale;
-    %u(xg/L<0.4 | xg/L> 0.6 | yg/L < 0.4 | yg/L > 0.6)=min(StSt);
+    %u(xg/L>0.4 & xg/L< 0.6 & yg/L > 0.4 & yg/L < 0.6)=max(StSt);
     kvals = [0:Nx/2 -Nx/2+1:-1]*2*pi/L;
     [kx,ky]=meshgrid(kvals);
     ksq=kx.^2+ky.^2;
@@ -308,13 +309,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.EnoughExcitation = EnoughExcitation;
     Statistics.LongestNoStim = longest*dt*saveEvery;
     if (doPlot)
-        pppp=1;
+        figure
+        %pppp=1;
         % Snapshots
         [~,nPlot]=size(PlotUs);
-        %tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
-        %nexttile
+        tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:length(tsaves)
-            nexttile(pppp)
+            nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             %title(strcat('$t=$',num2str(PlotTs(iT))))
             clim([min(AllRho(:)) max(AllRho(:))])
@@ -341,7 +342,7 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
             %xticklabels('')
         end
         % Kymograph
-        nexttile(1+pppp)
+        nexttile
         for iK=2:length(kymopts)
         kymopt = kymopts(iK);
         RhoT=reshape(ogRho(kymopt,:,:),Nx,[])';
@@ -363,17 +364,20 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         scatter(19.9*ones(length(StimIndex),1),tsaves(StimIndex),20,'k','filled')
         xlabel('$x$ ($\mu$m)')
         clim([min(RhoT(:)) max(RhoT(:))])
-        xticklabels('')
+        %xticklabels('')
         pbaspect([1 1 1])
         %yticklabels('')
         hold off
+        ylim([200 500])
+        ylabel('$t$ (s)')
+        yticklabels(yticks-200)
         break
         end
         end
-        nexttile(pppp)
+        nexttile(1)
         plot(xlim,kymopts(iK)*dx*[1 1],':k')
         hold off
-        nexttile(pppp+2)
+        nexttile(3)
         imagesc(ResampledX,ResampledT,InterpolatedSim)
         colormap(gca,'turbo')
         xlabel('$\Delta r$ ($\mu$m)')

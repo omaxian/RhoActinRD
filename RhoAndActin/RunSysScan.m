@@ -1,8 +1,8 @@
-% For parameter scanning
+% For parameter scanning over the forward model
 function []=RunSysScan(RandomSeed)
 % Bounds for params
 addpath(genpath('.'))
-nSamp = 60;
+nSamp = 500;
 nSeed = 10;
 nParams = 8;
 numNonZero = 1;

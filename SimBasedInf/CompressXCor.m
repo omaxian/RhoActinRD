@@ -1,3 +1,4 @@
+% Compress cross correlations using autoencoders and PCA
 load('AllXCors.mat')
 nTrain=10000;
 nTest=1000;

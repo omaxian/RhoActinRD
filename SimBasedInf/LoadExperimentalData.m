@@ -1,3 +1,4 @@
+% Process and filter experimental data for starfish and worms
 rng(0);
 %% Starfish
 nModesFilt = 50;

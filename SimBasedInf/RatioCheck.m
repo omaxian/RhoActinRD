@@ -1,13 +1,17 @@
+% This makes Fig. S5 - checking the ratio test. 
+% It compares the distribution of cross correlations over the same
+% parameter set p(x|theta) with random samples of cross correlation,
+% weighted by the ratio the classifier gives you, p(x)r(x|theta)
 rng(0);
-Noise = [0 1e-2];
+Noise = [0 5e-3];
 PCASizes=40*ones(length(Noise),1);
-RegZations=0*ones(length(Noise),1);
+RegZations=[0 1e-5];
 
-j=1;
+j=7; % mode number to visualize
 ParInds = [3 6 10 11];
 load('SyntheticXCors_ManySamps.mat')
 load('PrincipalComponentsXCor.mat')
-TestXCors=XCors_StarSim;
+TestXCors=XCors_WormSim;
 TestXCorsTr=U'*TestXCors;
 TestXCorsTr=TestXCorsTr(1:max(PCASizes),:);
 %bedge = -5:15;
@@ -34,11 +38,11 @@ TestCors=TestCors(1:40,:);
 BinNum = 1+floor((TestCors(j,:)-bedge(1))/(bedge(2)-bedge(1)));
 BinNum(BinNum<1)=1;
 BinNum(BinNum>length(xpl))=length(xpl);
-InputVec = [TestXCorsTr(:,1)'.*ones(nTest,1) pChk'];
+InputVec = [TestXCorsTr(:,1)'.*ones(nTest,1) 0.4*ones(nTest,1) pChk'];
 
 load(strcat('TC_XCorNoise',num2str(Noise(jEncSize)),...
     'PCA',num2str(PCASizes(jEncSize)),...
-    'Lam',num2str(RegZations(jEncSize)),'_Hyb.mat'),...
+    'Lam',num2str(RegZations(jEncSize)),'_Hyb5.mat'),...
     'trainedClassifier')
 
 [yfit,scores] = trainedClassifier.predictFcn(InputVec); 

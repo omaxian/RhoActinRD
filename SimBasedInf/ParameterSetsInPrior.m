@@ -1,36 +1,36 @@
-function ParametersInPrior = ParameterSetsInPrior(ParInds,FixedParSet)
-    if (FixedParSet>0)
-        nPerDim=200;
-        nV=2;
-    else
-        nPerDim=60;
+% Sample parameter sets from the prior
+function [EveryParameter,InPrior] = ParameterSetsInPrior(ParInds)
+    if (length(ParInds)==4)
+        nPerDim=50;
         nV=4;
+    elseif (length(ParInds)==5)
+        nPerDim=25;
+        nV = 5;
+        if (nargin==2)
+            nV = 3;
+            nPerDim=80;
+        end
     end
     Allps = zeros(nPerDim,nV);
     TotalNum = nPerDim^nV;
-    if (FixedParSet==0)
+    if (length(ParInds)==4)
         PBounds = [1 40; 0.1 10; 0 8; 0 100];
         for k=1:size(PBounds,1)
-            Allps(:,k) = PBounds(k,1)+(1:nPerDim)/nPerDim*(PBounds(k,2)-PBounds(k,1));
+            Allps(:,k) = PBounds(k,1)+(0:nPerDim-1)/(nPerDim-1)*(PBounds(k,2)-PBounds(k,1));
         end
         [x1,x2,x3,x4]=ndgrid(Allps(:,1),Allps(:,2),Allps(:,3),Allps(:,4));
         EveryParameter = [0.7*ones(TotalNum,1) 0.4*ones(TotalNum,1) x1(:) ones(TotalNum,2) ...
             x2(:) x3(:) x4(:)];
-    elseif (FixedParSet==1)
-        PBounds = [1 40; 0.1 10];
+    elseif (length(ParInds)>4)
+        PBounds = [0.2 0.6; 1 60; 0.1 10; 0 8; 0 150];
         for k=1:size(PBounds,1)
-            Allps(:,k) = PBounds(k,1)+(1:nPerDim)/nPerDim*(PBounds(k,2)-PBounds(k,1));
+            Allps(:,k) = PBounds(k,1)+(0:nPerDim-1)/(nPerDim-1)*(PBounds(k,2)-PBounds(k,1));
         end
-        [x1,x2]=ndgrid(Allps(:,1),Allps(:,2));
-        EveryParameter = [0.7*ones(TotalNum,1) 0.4*ones(TotalNum,1) x1(:) ones(TotalNum,2) ...
-            x2(:) 1.1*ones(TotalNum,1) 50*ones(TotalNum,1)];
-    elseif (FixedParSet==2)
-        PBounds = [0 4; 0 100];
-        for k=1:size(PBounds,1)
-            Allps(:,k) = PBounds(k,1)+(1:nPerDim)/nPerDim*(PBounds(k,2)-PBounds(k,1));
-        end
-        [x3,x4]=ndgrid(Allps(:,1),Allps(:,2));
-        EveryParameter = [[0.7 0.4 30 1 1 1].*ones(TotalNum,6) x3(:) x4(:)];
+        [x1,x2,x3,x4,x5]=ndgrid(Allps(:,1),Allps(:,2),Allps(:,3),Allps(:,4),Allps(:,5));
+        EveryParameter = [0.7*ones(length(x1(:)),1) x1(:) x2(:) ones(length(x1(:)),2) ...
+            x3(:) x4(:) x5(:)];
+        EveryParameter(EveryParameter(:,end-1)>1.6./EveryParameter(:,2),:) = [];
+        EveryParameter(EveryParameter(:,end)> 150 - 140/0.4*(EveryParameter(:,2)-0.2),:) = [];
     end
     MonomerClock = EveryParameter(:,6)./EveryParameter(:,4)+...
         EveryParameter(:,6)./EveryParameter(:,5)+EveryParameter(:,3);
@@ -40,7 +40,11 @@ function ParametersInPrior = ParameterSetsInPrior(ParInds,FixedParSet)
     EveryParameter(:,8)=NucRate_Rho;
     EveryParameter=AddParams(EveryParameter);
     
-    load('TC_uStimInducSustain.mat','TC_Sustainable')
+    if (ParInds(1)~=2)
+        load('TC_uStimInducSustain.mat','TC_Sustainable')
+    else
+        load('TC_rgInducSustain.mat','TC_Sustainable')
+    end
     InPrior = TC_Sustainable.predictFcn(EveryParameter(:,ParInds));
-    ParametersInPrior = EveryParameter(InPrior,:);
+    %ParametersInPrior = EveryParameter(InPrior,:);
 end

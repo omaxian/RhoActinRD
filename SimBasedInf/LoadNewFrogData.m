@@ -1,4 +1,5 @@
-MasterFolder = strcat('/Users/ondrejmaxian/Documents/CHICAGO/SRD/',...
+% Process and filter frog data
+MasterFolder = strcat('/Users/ondrejmaxian/Documents/SRD/',...
     'Frog data for Ondrej/Frog stuff for Ondrej/');
 Doses = [33 66 166 333 1000];
 for jD=1:length(Doses)
@@ -47,6 +48,9 @@ for jD=1:nDose
     Actin=double(Actin(:,:,1:end-1));
     [FiltRho,RhoHatMean,ACorsRho,TimeLags] = FilterData(Rho,nModesFilt,FrTime);
     [FiltActin,ActHatMean,ACorsAct,TimeLags] = FilterData(Actin,nModesFilt,FrTime);
+    % Find the % of actin that colocalizes with Rho
+    Spots=FiltRho>prctile(FiltRho(:),90);
+    prcColoc = sum(FiltActin(Spots(:)))/sum(FiltActin(:));
     Nx = size(Rho,2);
     Ny = size(Rho,1);
     x=(0:Nx-1)*pxlSize;
