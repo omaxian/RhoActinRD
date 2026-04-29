@@ -7,9 +7,9 @@ This repository contains the Matlab code for the publications
 The main code is divided into two folders, corresponding to the "forward model" (RhoAndActin), 
 and the neural-network based inference tools (SimBasedInf). 
 For the forward model, the first file to run 
-can be found in [MakeMoviesBestFit](https://github.com/omaxian/RhoActinRD/blob/master/RhoAndActin/MakeMoviesBestFit.m) 
+can be found in [MakeMoviesBestFit](https://github.com/omaxian/RhoActinRD/blob/master/RhoAndActin/MakeMoviesBestFit.m). 
 This will generate Fig. 2 in the PNAS paper (all of the simulations best fit to the experimental data), and more generally is the interface for the discrete model coupling actin filaments to continuum Rho dynamics. Codes for continuum model (Fig. 5 in the text) can be found [here](https://github.com/omaxian/RhoActinRD/blob/master/RhoAndActin/ContinuumModels/RhoAndActinTauPDEs.m)
 
 The main driver file for the hybrid model is [RhoAndActinBasalNuc](https://github.com/omaxian/RhoActinRD/blob/master/RhoAndActin/RhoAndActinBasalNuc.m). 
 
-For simulation-based inference, the main interface is in [InferFromData], which gives you the likelihood functions assuming the classifier is already trained. 
+For simulation-based inference, the main interface is in [InferFromData](https://github.com/omaxian/RhoActinRD/blob/master/SimBasedInf/InferFromData.m), which gives you the likelihood functions assuming the classifier is already trained. 
