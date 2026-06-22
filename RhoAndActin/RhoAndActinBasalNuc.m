@@ -7,7 +7,7 @@
 % and the longest time excitation was sustained without forcing
 function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     rng(seed);
-    MakeMovie=0;
+    MakeMovie=doPlot;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
