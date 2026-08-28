@@ -16,10 +16,8 @@ for iSamp=1:nSamp
     if (nPar==5)
             Params = [0.7; 0.2+xr(1)*0.4; 1+xr(2)*59; 1; 1; ...
         0.1+xr(3)*9.9; 4/3; xr(4)*200];
-        fRhoMax = 150 - 140/0.4*(Params(2)-0.2);
         fbMax = 1.6/Params(2);
         Params(7) = xr(5)*fbMax;
-        Params(8) = xr(4)*fRhoMax;
         MonomerClock = Params(6)/Params(4)+Params(6)/Params(5)+Params(3);
         NucRate_B = Params(7)/(MonomerClock*Params(6));
         NucRate_Rho = Params(8)/(MonomerClock*Params(6));

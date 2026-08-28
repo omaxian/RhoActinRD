@@ -1,10 +1,10 @@
 cd(fileparts(which(mfilename)));
 addpath(genpath('..'))
 % Main file to train a classifier from the data
-for seed=0:1
+for seed=1
 rng(seed);
 nP=5;
-load(strcat('UniformResults/Scan',num2str(nP),'OneInPrior.mat'))
+load(strcat('UniformResults/Scan',num2str(nP),'NewOneInPrior.mat'))
 nSampAll=size(AllParameters,2);
 inds=randperm(nSampAll,nSampAll);
 AllParameters=AllParameters(:,inds);

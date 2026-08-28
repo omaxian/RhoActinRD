@@ -1,7 +1,7 @@
 % Process and filter frog data
 MasterFolder = strcat('/Users/ondrejmaxian/Documents/SRD/',...
     'Frog data for Ondrej/Frog stuff for Ondrej/');
-Doses = [33 66 166 333 1000];
+Doses = [0]; %33 66 166 333 1000];
 for jD=1:length(Doses)
     TIFList{jD}=[];
     DoseFolder = strcat(num2str(Doses(jD)),' ng copy/');
@@ -20,9 +20,9 @@ for jD=1:length(Doses)
 end
 
 nDose = length(Doses);
-RepIndexByDose = [7 2 16 1 10];
+RepIndexByDose = [1 7 2 16 1 10];
 rng(0);
-tiledlayout(3,length(Doses),'Padding', 'none', 'TileSpacing', 'compact');
+tiledlayout(length(Doses),3,'Padding', 'none', 'TileSpacing', 'compact');
 nModesFilt=100;
 FrTime = 6;
 pxlSize = 0.2661449; % um

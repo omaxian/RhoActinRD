@@ -3,12 +3,19 @@
 % It will generate a plot of the average LER over the parameters 
 % you specify. Right now it is set up to do inference on the starfish data,
 % holding kGAP constant
-figure(3);
-%tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
+nP = 5;
+figure(1);
+PriorCutoff=0.5;
+%tiledlayout(2,6,'Padding', 'none', 'TileSpacing', 'compact');
+nModes = [10];
+Noise =[0];
+RegZations = [1e-3];
+nLay = [20 40 20];
+nW = 1;
 for iDose=1
 rng(1);
-DataType='S';
-ParInds=[3 6 10 11]; % (change to [2 3 6 10 11] to also vary kGAP)
+DataType='R';
+ParInds=[2 3 6 10 11]; % (change to [2 3 6 10 11] to also vary kGAP)
 FwdModel = @(p) RhoAndActinBasalNuc(p,1,0);
 FwdModelPlot = @(p) RhoAndActinBasalNuc(p,1,1);
 nPTot=11;
@@ -30,8 +37,9 @@ if (DataType=='S')
     % xlabel('$x$ ($\mu$m)')
     % ylabel('$t$ (s)')
     % TestXCors =StatsTrue.XCor(:);
-    load('SyntheticXCors_ManySamps.mat')
-    TestXCors = mean(XCors_WormSim,2);
+    load('AllRepeats5.mat')
+    ParamsTest=Allps(iDose,:);
+    TestXCors = mean(XCorsPars(:,:,iDose),2);
 elseif (DataType=='R')
     load('XCor_Starfish.mat')
     ParamsTest = [0.7 0.4 24.8508 1 1 0.8762 0.0536 0.8874]; % starfish ABC
@@ -41,41 +49,84 @@ elseif (DataType=='R')
     %DataXCor=XCorsByDose(:,:,iDose);
     TestXCors=DataXCor(:);
     %ParamsTest=[];
+    % nexttile
+    % imagesc(0:0.5:10,-120:5:120,DataXCor)
+    % colormap(gca,'turbo')
+    % clim([-1 1])
+    % pbaspect([1 1 1])
+    % xlabel('$\Delta r$ ($\mu$m)','interpreter','latex')
+    % ylabel('$\Delta t$ (s)','interpreter','latex')
+    % title('Data')
 end
+fixkgapval=ParamsTest(2);
 try
 ParamsTest=AddParams(ParamsTest);
 catch
 end
 
-% Compute probabilities
-PCASizes = [40];%
-Noise =[0];
-RegZations = [0];
-
-
-[EveryParameter,InPrior] = ParameterSetsInPrior(ParInds);
+if (fixkgapval>0)
+    EveryParameter = UniformParameterSets(ParInds(2:end),fixkgapval);
+else
+    EveryParameter = UniformParameterSets(ParInds);
+end
+% Pass through the prior
+load(strcat('TCPriorOne_',num2str(nP),'.mat'))
+[~,PriorScore]=TC_Sustainable.predictFcn(EveryParameter(:,ParInds));
+InPrior = PriorScore(:,2) > PriorCutoff;
+InPrior(EveryParameter(:,10)>1.6./EveryParameter(:,2))=0;
+InPrior=logical(InPrior);
 ParametersInPrior = EveryParameter(InPrior,:);
-for jEncSize=1:length(PCASizes)
+
+for jEncSize=1:length(nModes)
 TestXCorsTr=U'*TestXCors;
-TestXCorsTr = TestXCorsTr(1:PCASizes(jEncSize),:);
-load(strcat('TC_XCorNoise',num2str(Noise(jEncSize)),'PCA',num2str(PCASizes(jEncSize)),...
-    'Lam',num2str(RegZations(jEncSize)),'_Hyb5.mat'),'trainedClassifier')
+TestXCorsTr = TestXCorsTr(1:nModes(jEncSize),:);
+LikelihoodToEvidence = zeros(length(EveryParameter),1);
+nSeed=2;
+for seed=1:nSeed
+load(strcat('NewTC',num2str(seed-1),'_XCorNoise',num2str(Noise),...
+    'PCA',num2str(nModes),...
+    'Lam',num2str(RegZations),'_nLay',num2str(nLay),...
+    '_nW',num2str(nW),'ONEnP',num2str(nP),'.mat'),...
+    'trainedClassifier')
 % Use classifier to evaluate likelihood to evidence
 InputVec = [TestXCorsTr'.*ones(size(ParametersInPrior,1),1) ParametersInPrior(:,ParInds)];
-if (ParInds(1)>2)
-    InputVec = [InputVec(:,1:PCASizes(jEncSize),:) 0.4*ones(size(InputVec,1),1) InputVec(:,PCASizes(jEncSize)+1:end)];
-end
 [~,scores] = trainedClassifier.predictFcn(InputVec); 
-LikelihoodToEvidence = zeros(length(EveryParameter),1);
-LikelihoodToEvidence(InPrior) = scores(:,2)./(1-scores(:,2));
+LikelihoodToEvidence(InPrior) = LikelihoodToEvidence(InPrior)+...
+    1/nSeed*scores(:,2)./(1-scores(:,2));
 if (DataType=='S')
    [yy,sc] = trainedClassifier.predictFcn(...
-       [TestXCorsTr' 0.4 ParamsTest(ParInds)])
+       [TestXCorsTr' ParamsTest(ParInds)])
+end
 end
 [vals,inds]=sort(LikelihoodToEvidence);
+mval = max(LikelihoodToEvidence);
+[~,maxind]=max(LikelihoodToEvidence-mval*(PriorScore(:,2)<0.75));
 % Compute marginals
-figure(3);
+figure(1);
 [uvals{iDose},AllMarg{iDose}] = Compute2DMarginals(LikelihoodToEvidence,EveryParameter,...
-   ParInds,1,ParamsTest,jEncSize,3);
+   ParInds,1,ParamsTest,maxind,jEncSize,3);
 end
+XCorAvg=zeros(121,21);
+nnz=0;
+for j=1:10
+    Stats1=RhoAndActinBasalNuc(EveryParameter(maxind,:),j,0,1);
+    if (Stats1.EnoughExcitation)
+        XCorAvg=XCorAvg+1/2*Stats1.XCor;
+        nnz=nnz+1;
+    end
+    if (nnz==2)
+        break;
+    end
+end
+if (nnz~=2)
+    keyboard
+end
+nexttile
+imagesc(Stats1.rSim,Stats1.tSim,XCorAvg)
+colormap(gca,'turbo')
+xlabel('$\Delta r$ ($\mu$m)','interpreter','latex')
+ylabel('$\Delta t$ (s)','interpreter','latex')
+pbaspect([1 1 1])
+clim([-1 1])
+hold off
 end

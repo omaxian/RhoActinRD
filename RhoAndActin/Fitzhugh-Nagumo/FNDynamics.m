@@ -43,10 +43,10 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
     x=(0:Nx-1)*dx;
     y=(0:Nx-1)*dx;
     [xg,yg]=meshgrid(x,y);
-    u = RtStart(1)+0.5*(1+sin(2*pi*xg/L).*...
-    sin(2*pi*yg/L))*(RtEnd(1)-RtStart(1));
-    v = RtStart(2)+0.5*(1+sin(2*pi*xg/L).*...
-    sin(2*pi*yg/L))*(RtEnd(2)-RtStart(2));
+    % u = RtStart(1)+0.5*(1+sin(2*pi*xg/L).*...
+    % sin(2*pi*yg/L))*(RtEnd(1)-RtStart(1));
+    % v = RtStart(2)+0.5*(1+sin(2*pi*xg/L).*...
+    % sin(2*pi*yg/L))*(RtEnd(2)-RtStart(2));
     
     if (MakeMovie)
         f=figure('Position',[100 100 600 300]);
@@ -70,7 +70,7 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
             unstable=1;
             return
         end
-        if (mod(iT-1,10)==0 && MakeMovie)
+        if (mod(iT,20)==0 && MakeMovie)
             tiledlayout(1,2,'Padding', 'none', 'TileSpacing', 'compact');
             nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,u);
@@ -85,10 +85,10 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
             ylabel('$y$ ($\mu$m)')
             %colorbar
             pbaspect([1 1 1])
-            title(strcat('$\rho$, $t=$',num2str(iT*dt)))
+            colormap(gca,sky)
+            title(strcat('$t=$',num2str(iT*dt)))
             nexttile
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,v);
-            colormap turbo
             rngV=range(v(:));
             clim([min(v(:)) max(v(:))])
             %clim([1.2 2.2])
@@ -97,9 +97,15 @@ function [Stats,unstable] = FNDynamics(Params,seed,dt,MakeMovie)
                 clim([mean(v(:))-0.5 mean(v(:))+0.5])
             end
             %colorbar
-            title(strcat('$f$, $t=$',num2str(iT*dt)))
+            C1 = [1 1 1];
+            C2=[0.85 0.325 0.098];
+            Cmp2 = C1+(0:100)'/100*(C2-C1);
+            colormap(gca,Cmp2)
+            title(strcat('$t=$',num2str(iT*dt)))
             pbaspect([1 1 1])
-            movieframes((iT-1)/10+1)=getframe(f);
+            set(gcf, 'Color', 'w');
+            set(gca, 'Color', 'w');
+            movieframes(iT/20+1)=getframe(f);
         end
         % if (mod(iT,30)==0 && MakeMovie && iT*dt>100)
         %     nexttile

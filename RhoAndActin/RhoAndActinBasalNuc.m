@@ -5,9 +5,9 @@
 % Output is a struct with the Statistics from the simulation
 % This includes cross correlation, excitaton sizes, autocorrelations, 
 % and the longest time excitation was sustained without forcing
-function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
+function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot,iD)
     rng(seed);
-    MakeMovie=doPlot;
+    MakeMovie=0;
     kbasal=0.05;
     kfb=1;
     KFB=0.1;
@@ -117,47 +117,6 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
                 koffz=koff0*ones(Nx);
             elseif (min(koffz(:))>kThres)
                 koffz = 0.4*ones(Nx);
-                % MaxStimPxls=floor(10/dx^2);
-                % % Choose a centroid at random and include all pixels
-                % % within a radius around it
-                % ctrstim=[L/2 L/2];%rand(1,2)*L;
-                % xd=xg-ctrstim(1);
-                % xd(xd < -L/2)=xd(xd < -L/2)+L;
-                % xd(xd>L/2)=xd(xd>L/2)-L;
-                % yd=yg-ctrstim(2);
-                % yd(yd < -L/2)=yd(yd < -L/2)+L;
-                % yd(yd>L/2)=yd(yd>L/2)-L;
-                % rt = sqrt(xd.^2+yd.^2);
-                % Elig = rt < sqrt(MaxStimPxls)*dx;
-                % koffz(Elig) = 0.4;
-                % Identify holes in the mesh
-                % ActinHole = fg<0.5;
-                % CC = bwconncomp(ActinHole);
-                % L2=CC2periodic(CC,[1 1],'L'); 
-                % Elig=1:max(L2(:));
-                % % Excite 25% of the regions
-                % ExciteMe = rand(length(Elig),1)<0.25;
-                % Regions=Elig(ExciteMe);
-                % for j=Regions
-                %     [BinRow,BinCol]=find(L2==j);
-                %     xy = ([BinCol BinRow]-1)*dx;
-                %     if (length(BinRow)>MaxStimPxls)
-                %         % Choose a centroid at random and include all pixels
-                %         % within a radius around it
-                %         ctrstim=xy(ceil(rand*length(BinRow)),:);
-                %         xd=xg-ctrstim(1);
-                %         xd(xd < -L/2)=xd(xd < -L/2)+L;
-                %         xd(xd>L/2)=xd(xd>L/2)-L;
-                %         yd=yg-ctrstim(2);
-                %         yd(yd < -L/2)=yd(yd < -L/2)+L;
-                %         yd(yd>L/2)=yd(yd>L/2)-L;
-                %         rt = sqrt(xd.^2+yd.^2);
-                %         Elig = rt < sqrt(MaxStimPxls)*dx & ActinHole;
-                %         koffz(Elig) = 0.4;
-                %     else
-                %         koffz(L2==j)=0.4;
-                %     end
-                % end
             end
         end
         RHS = (kbasal+kfb*u.^3./(KFB+u.^3))-(koffz+rf*fg).*u;
@@ -205,6 +164,8 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
                 set(gca,'YColor','m')
                 set(gca,'XColor','m')
             end
+            set(gcf, 'Color', 'w');
+            set(gca, 'Color', 'w');
             movieframes(iT)=getframe(f);
         end
         if (mod(iT-1,saveEvery)==0)
@@ -309,13 +270,13 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
     Statistics.EnoughExcitation = EnoughExcitation;
     Statistics.LongestNoStim = longest*dt*saveEvery;
     if (doPlot)
-        figure
+        %figure
         %pppp=1;
         % Snapshots
         [~,nPlot]=size(PlotUs);
-        tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
+        %tiledlayout(1,3,'Padding', 'none', 'TileSpacing', 'compact');
         for iT=1:length(tsaves)
-            nexttile
+            nexttile(3*iD-2)
             imagesc((0:Nx-1)*dx,(0:Nx-1)*dx,reshape(PlotUs(:,iT),Nx,Nx));
             %title(strcat('$t=$',num2str(PlotTs(iT))))
             clim([min(AllRho(:)) max(AllRho(:))])
@@ -338,31 +299,35 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
              else
                 yticklabels('')
              end
+             if (iD==5)
             xlabel('$x$ ($\mu$m)')
+             end
             %xticklabels('')
         end
         % Kymograph
-        nexttile
-        for iK=2:length(kymopts)
+        nexttile(3*iD-1)
+        for iK=3:length(kymopts)
         kymopt = kymopts(iK);
         RhoT=reshape(ogRho(kymopt,:,:),Nx,[])';
-        if (max(max(RhoT(IncludeMe,:))) >Thres && min(min(RhoT(IncludeMe,:))) < Thres)
+        if (1 || max(max(RhoT(IncludeMe,:))) >Thres && min(min(RhoT(IncludeMe,:))) < Thres)
         tsaves = (0:(size(ogRho,3)-1))*saveEvery*dt-40;
         imagesc((0:Nx-1)*dx,tsaves,RhoT)
         colormap(gca,sky)
         hold on
-        % Xt=[];
-        % for j=1:length(tsaves)
-        %     xpl=xCoords{j};
-        %     Xt=[Xt;tsaves(j)*ones(length(xpl),1) xpl];
-        % end
-        % scatter(Xt(:,2),Xt(:,1),2,'s', ...
-        %         'MarkerFaceColor',[0.87    0.49    0],...
-        %         'MarkerEdgeColor','None',...
-        %         'MarkerFaceAlpha',0.04)
+        Xt=[];
+        for j=1:length(tsaves)
+            xpl=xCoords{j};
+            Xt=[Xt;tsaves(j)*ones(length(xpl),1) xpl];
+        end
+        scatter(Xt(:,2),Xt(:,1),2,'s', ...
+                'MarkerFaceColor',[0.87    0.49    0],...
+                'MarkerEdgeColor','None',...
+                'MarkerFaceAlpha',0.04)
         StimIndex=find(Stimulated==1);
         scatter(19.9*ones(length(StimIndex),1),tsaves(StimIndex),20,'k','filled')
+        if (iD==5)
         xlabel('$x$ ($\mu$m)')
+        end
         clim([min(RhoT(:)) max(RhoT(:))])
         %xticklabels('')
         pbaspect([1 1 1])
@@ -374,13 +339,15 @@ function Statistics = RhoAndActinBasalNuc(Params,seed,doPlot)
         break
         end
         end
-        nexttile(1)
+        nexttile(3*iD-2)
         plot(xlim,kymopts(iK)*dx*[1 1],':k')
         hold off
-        nexttile(3)
+        nexttile(3*iD)
         imagesc(ResampledX,ResampledT,InterpolatedSim)
         colormap(gca,'turbo')
+        if (iD==5)
         xlabel('$\Delta r$ ($\mu$m)')
+        end
         ylabel('$\Delta t$ (s)')
         pbaspect([1 1 1])
         clim([-1 1])

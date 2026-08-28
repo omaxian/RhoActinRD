@@ -6,7 +6,7 @@
 % Outputs: the unique 1D values of all parameters, the 2D marginals as a
 % set of matrices, and the 1D marginals over kGAP (if kGAP is varying).  
 function [uvals,AllMarg,kraMarg] = Compute2DMarginals(LikelihoodToEvidence,ParametersInPrior,...
-    ParInds,doPlot,ParamsTest,jD,nD)
+    ParInds,doPlot,ParamsTest,maxind,jD,nD)
     nV=length(ParInds);
     uvals = cell(nV,1);
     allindices = cell(nV,1);
@@ -37,14 +37,14 @@ function [uvals,AllMarg,kraMarg] = Compute2DMarginals(LikelihoodToEvidence,Param
         end
         nexttile(jD)
         plot(uvals{1},kraMarg)
-        xlabel('$k_\textrm{GAP}$')
+        xlabel('$k_\textrm{GAP}$','interpreter','latex')
         pbaspect([1 1 1])
         if (jD==1)
         ylabel('Mean LER','interpreter','tex')
         end
         xlim([0.2 0.6])
-        end
         set(gca,'YScale','Log')
+        end
     end
     for jM=1:length(IndsX)
     ind1=IndsX(jM);
@@ -61,7 +61,7 @@ function [uvals,AllMarg,kraMarg] = Compute2DMarginals(LikelihoodToEvidence,Param
     if (doPlot)
     nexttile%(jM*nD+jD)
     try
-    contourf(uvals{ind1},uvals{ind2},log10(FirstMarg),-2:0.5:min(10,floor(max(log10(FirstMarg(:))))))
+    contourf(uvals{ind1},uvals{ind2},log10(FirstMarg),-4:0.5:min(10,floor(max(log10(FirstMarg(:))))))
     catch
     %contourf(uvals{ind1},uvals{ind2},log10(FirstMarg))
     end
@@ -78,13 +78,15 @@ function [uvals,AllMarg,kraMarg] = Compute2DMarginals(LikelihoodToEvidence,Param
         scatter(ParamsTest(ParInds(ind1)),ParamsTest(ParInds(ind2)),50,'k','filled')
     catch
     end
+    ParsMax = ParametersInPrior(maxind,ParInds);
+    scatter(ParsMax(ind1),ParsMax(ind2),50,'w','filled')
     if (jD==nD && jM==length(IndsX))
         colorbar
     end
     if (jD==1)
-        ylabel(yLabels(jM))
+        ylabel(yLabels(jM),'interpreter','latex')
     end
-    xlabel(xLabels(jM))
+    xlabel(xLabels(jM),'interpreter','latex')
     pbaspect([1 1 1])
     end
     % figure(2)
