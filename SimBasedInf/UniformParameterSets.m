@@ -1,4 +1,4 @@
-% Sample parameter sets from the prior
+% Sample parameter sets uniformly from a specified range (Table S1)
 function EveryParameter = UniformParameterSets(ParInds,fixkgapval)
     if (length(ParInds)==4)
         nPerDim=50;

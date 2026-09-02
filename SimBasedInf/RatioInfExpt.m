@@ -1,4 +1,6 @@
-% Experimental data plot in PCA and parameter space
+% Experimental data plot in PCA and parameter space. This specifically is
+% set up to make Fig. S6 (the pseudo-likelihood distributions) with
+% different classifier settings. 
 for offset=0:5:15
 nP=5;
 nPv=5;

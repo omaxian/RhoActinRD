@@ -1,6 +1,6 @@
-% This is the main file to infer parameters from data. 
+% This is the main file to infer the posterior from the data. 
 % Assumes you already have a pre-trained classifier. 
-% It will generate a plot of the average LER over the parameters 
+% It will generate a plot of the marginal posterior over the parameters 
 % you specify. Right now it is set up to do inference on the starfish data,
 % holding kGAP constant
 nP = 5;

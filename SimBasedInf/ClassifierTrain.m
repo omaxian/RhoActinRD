@@ -1,6 +1,7 @@
+% This is the main function to train the classifier (it calls
+% trainClassifier.m)
 cd(fileparts(which(mfilename)));
 addpath(genpath('..'))
-% Main file to train a classifier from the data
 for seed=1
 rng(seed);
 nP=5;

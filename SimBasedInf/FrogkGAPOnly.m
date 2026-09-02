@@ -1,6 +1,5 @@
-% This file makes Fig. 6A or B. It finds the one parameter that 
-% could vary with kGAP, then plots the marginal probability distributions.
-% Parameters
+% This file is for Fig. S9 (considering the pssibility that only kGAP can
+% vary). It is similar to OnePFrog.m
 %function FrogkGAPOnly(iP1)
 addpath(genpath('..'))
 nDose = 5;
